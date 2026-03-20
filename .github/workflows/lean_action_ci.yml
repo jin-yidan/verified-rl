@@ -1,0 +1,41 @@
+name: Lean Action CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read # Read access to repository contents
+  pages: write # Write access to GitHub Pages
+  id-token: write # Write access to ID tokens
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Lean and Restore Cache
+        uses: leanprover/lean-action@v1
+        with:
+          use-mathlib-cache: true
+      - name: Prepare SLT Dependency
+        run: |
+          lake update SLT
+          bash scripts/prepare_slt.sh
+      - name: Build Trusted Target
+        run: lake build --wfail RLGeneralization
+      - name: Build Draft Target
+        run: lake build RLGeneralization.Draft
+      - name: Check Manifest Consistency
+        run: bash scripts/check_manifest_consistency.sh
+      - name: Check Verified Target
+        run: bash scripts/check_verified_target.sh
+      - name: Check Generated Status Summary
+        run: python3 scripts/generate_status.py --check
+      - name: Check Benchmark Metadata
+        run: python3 scripts/check_benchmark_metadata.py
+      - name: Benchmark Ground Truth Smoke Test
+        run: python3 benchmark/evaluate.py --prover ground_truth --limit 3

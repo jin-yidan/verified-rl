@@ -1,0 +1,30 @@
+
+=== MLStatBench Problem Extraction ===
+Total problems: 1308
+
+By source:
+  rl: 336
+  slt: 972
+
+By domain:
+  bellman: 86
+  concentration: 75
+  exploration: 38
+  other: 1
+  policy_optimization: 53
+  regression: 1014
+  sample_complexity: 32
+  simulation: 9
+
+By difficulty:
+  bridge: 30
+  easy: 66
+  hard: 115
+  medium: 1097
+
+By status:
+  conditional: 24
+  exact: 221
+  unknown: 972
+  weaker: 89
+  wrapper: 2

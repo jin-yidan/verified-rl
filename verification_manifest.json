@@ -1,0 +1,884 @@
+{
+  "verified_target": {
+    "root_module": "RLGeneralization",
+    "build_command": "lake build --wfail",
+    "description": "Trusted, warning-free benchmark target.",
+    "modules": [
+      {
+        "module": "RLGeneralization.MDP.Basic",
+        "status": "exact",
+        "note": "Core discounted MDP definitions and Bellman operators."
+      },
+      {
+        "module": "RLGeneralization.MDP.BellmanContraction",
+        "status": "exact",
+        "note": "Bellman contraction and norm bounds."
+      },
+      {
+        "module": "RLGeneralization.MDP.SimulationLemma",
+        "status": "exact",
+        "note": "Kearns-Singh comparison inequality. The exact resolvent identity is in SimulationResolvent; this inequality is a genuine corollary sufficient for all downstream uses."
+      },
+      {
+        "module": "RLGeneralization.MDP.ValueIteration",
+        "status": "exact",
+        "note": "Value-iteration convergence, threshold, and a self-contained \u03b5-optimal policy construction via Banach fixed point."
+      },
+      {
+        "module": "RLGeneralization.MDP.PolicyIteration",
+        "status": "exact",
+        "note": "Full policy-iteration sandwich step and convergence theorem."
+      },
+      {
+        "module": "RLGeneralization.MDP.Resolvent",
+        "status": "exact",
+        "note": "Resolvent bounds, fixed-point uniqueness, and optimal-policy existence theorems."
+      },
+      {
+        "module": "RLGeneralization.MDP.BanachFixedPoint",
+        "status": "exact",
+        "note": "Banach fixed-point construction of policy-evaluation and optimality Q fixed points in a complete sup-norm space."
+      },
+      {
+        "module": "RLGeneralization.MDP.PerformanceDifference",
+        "status": "exact",
+        "note": "One-step PDL identity and resolvent bound. The occupancy-measure form lives in OccupancyMeasure."
+      },
+      {
+        "module": "RLGeneralization.MDP.OccupancyMeasure",
+        "status": "exact",
+        "note": "Infinite-horizon occupancy measure via tsum, normalized state-visitation distribution, and the normalized Kakade-Langford performance-difference identity."
+      },
+      {
+        "module": "RLGeneralization.MDP.MatrixResolvent",
+        "status": "exact",
+        "note": "Matrix resolvent (I-\u03b3P^\u03c0)\u207b\u00b9 via Neumann series. Policy transition matrix, L\u221e norm bound, and resolvent identity."
+      },
+      {
+        "module": "RLGeneralization.MDP.SimulationResolvent",
+        "status": "exact",
+        "note": "Exact simulation resolvent identity: V_M - V_Mhat = sum d_hat * driving. Uses limit uniqueness with approximate transition powers."
+      },
+      {
+        "module": "RLGeneralization.MDP.FiniteHorizon",
+        "status": "exact",
+        "note": "Finite-horizon backward-induction core."
+      },
+      {
+        "module": "RLGeneralization.Generalization.SampleComplexity",
+        "status": "weaker",
+        "note": "Deterministic comparison/sample-complexity core."
+      },
+      {
+        "module": "RLGeneralization.Generalization.ComponentWise",
+        "status": "weaker",
+        "note": "Component-wise resolvent-style bounds."
+      },
+      {
+        "module": "RLGeneralization.LinearFeatures.LSVI",
+        "status": "weaker",
+        "note": "Approximate dynamic-programming error-propagation core for linear-feature value iteration."
+      },
+      {
+        "module": "RLGeneralization.Concentration.Hoeffding",
+        "status": "exact",
+        "note": "Hoeffding/union-bound bridge used by the verified target."
+      },
+      {
+        "module": "RLGeneralization.Concentration.Bernstein",
+        "status": "exact",
+        "note": "Bernstein MGF and tail bounds."
+      },
+      {
+        "module": "RLGeneralization.Concentration.GenerativeModelCore",
+        "status": "exact",
+        "note": "Trusted generative-model product measure, coordinate independence, and PAC concentration."
+      },
+      {
+        "module": "RLGeneralization.Concentration.GenerativeModel",
+        "status": "exact",
+        "note": "Bernstein PAC analysis with log-rate sample complexity (pac_rl_generative_model_bernstein), canonical fixed-point construction, end-to-end minimax value-gap theorem, and Bernstein composition (minimax_pac_bernstein_composed). Uses uniform variance bound p(1-p) ≤ 1/4 for clean sample-complexity formula; exact per-entry variance is preserved in the intermediate theorem generative_model_pac_bernstein."
+      },
+      {
+        "module": "RLGeneralization.Generalization.MinimaxSampleComplexity",
+        "status": "weaker",
+        "note": "Minimax deterministic core, variance/deviation bounds, rate scaling."
+      },
+      {
+        "module": "RLGeneralization.Bandits.UCB",
+        "status": "weaker",
+        "note": "Bandit definitions, oracle ETC regret, UCB algebraic core, confidence threshold, index domination lemmas, gap-dependent regret bound, and composed presentation form with pull-count counting argument."
+      },
+      {
+        "module": "RLGeneralization.Bandits.BanditConcentration",
+        "status": "exact",
+        "note": "Bernoulli reward probability space, Hoeffding concentration for arm means, union bound over all arms. Zero sorry."
+      },
+      {
+        "module": "RLGeneralization.LinearFeatures.RegressionBridge",
+        "status": "conditional",
+        "note": "LSVI-SLT bridge: type adapters, per-stage regression model, and deterministic sample-complexity chain. Key theorems take the regression rate as a hypothesis; lsvi_stage_slt_bound re-exports SLT's linear_minimax_rate."
+      },
+      {
+        "module": "RLGeneralization.BilinearRank.Auxiliary",
+        "status": "exact",
+        "note": "Trusted Bellman-rank definitions and exact bilinear Bellman-error bounds."
+      },
+      {
+        "module": "RLGeneralization.Exploration.UCBVI",
+        "status": "weaker",
+        "note": "Algebraic core of the UCBVI regret argument."
+      },
+      {
+        "module": "RLGeneralization.Exploration.BatchUCBVI",
+        "status": "exact",
+        "note": "Harmonic-sqrt bound, Cauchy-Schwarz for visit counts, pigeonhole bonus bound. Zero sorry."
+      },
+      {
+        "module": "RLGeneralization.PolicyOptimization.PolicyGradient",
+        "status": "weaker",
+        "note": "Definitions and algebraic identities; the full policy-gradient theorem is not proved."
+      },
+      {
+        "module": "RLGeneralization.PolicyOptimization.CPI",
+        "status": "exact",
+        "note": "Resolvent-based conservative policy-iteration improvement theorems."
+      },
+      {
+        "module": "RLGeneralization.PolicyOptimization.Optimality",
+        "status": "exact",
+        "note": "Gradient-domination structure and nonnegativity theorem."
+      },
+      {
+        "module": "RLGeneralization.OfflineRL.FQI",
+        "status": "exact",
+        "note": "Fitted Q-iteration contraction and error-propagation theorem."
+      },
+      {
+        "module": "RLGeneralization.ImitationLearning.Basic",
+        "status": "conditional",
+        "note": "Behavior-cloning algebraic wrapper and DAgger setup definitions. The PDL-based state-distribution argument is taken as hypothesis."
+      },
+      {
+        "module": "RLGeneralization.LinearMDP.Basic",
+        "status": "exact",
+        "note": "Linear-MDP definition and the optQ_linear proof."
+      },
+      {
+        "module": "RLGeneralization.LinearMDP.EllipticalPotential",
+        "status": "exact",
+        "note": "Elliptical-potential analytic core. Matrix-algebra hypotheses fully discharged via spectral theory + AM-GM. elliptical_potential_unconditional provides the fully self-contained version."
+      },
+      {
+        "module": "RLGeneralization.LinearMDP.Regret",
+        "status": "conditional",
+        "note": "UCBVI-Lin regret wrappers built on external optimism/bonus hypotheses."
+      },
+      {
+        "module": "RLGeneralization.LQR.Basic",
+        "status": "exact",
+        "note": "LQR definitions, Riccati infrastructure, and stageCost_nonneg theorem."
+      },
+      {
+        "module": "RLGeneralization.Test.SimpleMDP",
+        "status": "exact",
+        "note": "Sanity checks/examples for the trusted target."
+      }
+    ]
+  },
+  "draft_target": {
+    "root_module": "RLGeneralization.Draft",
+    "build_command": "lake build RLGeneralization.Draft",
+    "description": "Frontier modules excluded from the trusted benchmark root.",
+    "modules": [
+      {
+        "module": "RLGeneralization.BilinearRank.Basic",
+        "note": "Draft Bellman-rank degenerate helper and GOLF wrappers."
+      },
+      {
+        "module": "RLGeneralization.PolicyOptimization.NPG",
+        "note": "Natural policy-gradient update structure and step-size nonnegativity."
+      }
+    ]
+  },
+  "excluded_modules": [
+    {
+      "module": "RLGeneralization.API",
+      "reason": "Public re-export surface. This is an import convenience module, not a theorem-bearing verification target."
+    },
+    {
+      "module": "RLGeneralization.Basic",
+      "reason": "Placeholder utility module; not part of the formal theorem surface."
+    },
+    {
+      "module": "RLGeneralization.Concentration.MarkovChain",
+      "reason": "Excluded frontier file. Current theorem surface is too thin for trusted use and does not yet formalize a genuine concentration result."
+    },
+    {
+      "module": "RLGeneralization.Generalization.PolicyEvaluation",
+      "reason": "Excluded stub file for LSTD policy evaluation. Definitions compile, but the finite-sample theorem is not formalized."
+    },
+    {
+      "module": "RLGeneralization.Test.ConcreteExample",
+      "reason": "Concrete worked example and sanity-check module outside the trusted benchmark root."
+    }
+  ],
+  "theorems": [
+    {
+      "module": "RLGeneralization.Generalization.MinimaxSampleComplexity",
+      "name": "FiniteMDP.weighted_deviation_bound_genuine",
+      "status": "weaker",
+      "informal_claim": "Weighted-deviation resolvent bound.",
+      "lean_summary": "Derives a resolvent-style weighted-deviation bound from a proved variance bound and resolvent control.",
+      "gap_note": "The final constant/rate is weaker than the sharper variance-sensitive target statement used in the repository syllabus.",
+      "missing_lemmas": [
+        "Sharper variance recursion yielding the optimal target constant"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Generalization.MinimaxSampleComplexity",
+      "name": "FiniteMDP.variance_swap",
+      "status": "weaker",
+      "informal_claim": "Variance-swap inequality.",
+      "lean_summary": "Proves a concrete variance-comparison inequality by expanding variances and bounding the error terms.",
+      "gap_note": "The result is weaker and uses an explicit value-gap hypothesis rather than the sharpest target formulation.",
+      "missing_lemmas": [
+        "Sharper value-gap-to-variance bridge with optimal constants"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Generalization.MinimaxSampleComplexity",
+      "name": "FiniteMDP.minimax_deterministic_core",
+      "status": "weaker",
+      "informal_claim": "Deterministic minimax reduction.",
+      "lean_summary": "Composes existing optimality-gap machinery into the minimax deterministic reduction.",
+      "gap_note": "This is the deterministic core only; it does not add the high-probability sampling layer.",
+      "missing_lemmas": [
+        "Probabilistic concentration layer over the empirical model"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.etc_oracle_regret_bound",
+      "status": "weaker",
+      "informal_claim": "Oracle explore-then-commit combinatorial regret bound.",
+      "lean_summary": "Proves a real regret inequality for the oracle ETC witness that commits to the true best arm after exploration.",
+      "gap_note": "This is substantive, but it is weaker than the intended ETC algorithm because the commit phase is oracle.",
+      "missing_lemmas": [
+        "Empirical-best-arm commit rule",
+        "Concentration argument tying empirical means to the true best arm"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.ucb_regret_from_pull_count_bounds",
+      "status": "conditional",
+      "informal_claim": "UCB gap-dependent regret regrouping bound from pull-count control.",
+      "lean_summary": "Proves the deterministic regrouping step from per-arm pull-count bounds to a gap-weighted regret bound.",
+      "gap_note": "The full UCB proof still needs the probabilistic event construction and pull-count argument.",
+      "missing_lemmas": [
+        "Global confidence event",
+        "Optimism-driven arm-counting proof"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.confidence_threshold",
+      "status": "exact",
+      "informal_claim": "Confidence width threshold: if n >= 8L/Delta^2, then sqrt(2L/n) <= Delta/2.",
+      "lean_summary": "Shows that once a suboptimal arm has been pulled O(log/Delta^2) times, its confidence width shrinks below half its gap.",
+      "gap_note": "This is a genuine algebraic inequality used in the UCB pull-count analysis.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.ucb_index_le_opt_mean",
+      "status": "exact",
+      "informal_claim": "Under concentration, a suboptimal arm's UCB index is at most mu*.",
+      "lean_summary": "If |mu_hat - mu| <= w and Delta >= 2w, then mu_hat + w <= mu*. Algebraic consequence of the triangle inequality.",
+      "gap_note": "This is a genuine algebraic lemma for the UCB analysis.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.ucb_index_opt_ge_opt_mean",
+      "status": "exact",
+      "informal_claim": "Under concentration, the optimal arm's UCB index is at least mu*.",
+      "lean_summary": "If |mu_hat* - mu*| <= w, then mu* <= mu_hat* + w. Algebraic consequence of the triangle inequality.",
+      "gap_note": "This is a genuine algebraic lemma for the UCB analysis.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.ucb_gap_dependent_regret",
+      "status": "conditional",
+      "informal_claim": "UCB gap-dependent regret bound: R_T <= sum (8L/Delta_a + Delta_a).",
+      "lean_summary": "Under the pull-count hypothesis, composes the fiberwise regret decomposition with per-arm pull-count bounds to derive the gap-dependent regret bound.",
+      "gap_note": "The algebraic composition is fully proved. The sequential UCB selection argument (showing UCB achieves the right pull counts under concentration) is not formalized.",
+      "missing_lemmas": [
+        "Sequential UCB arm-selection argument under concentration event"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Bandits.BanditConcentration",
+      "name": "arm_mean_concentration",
+      "status": "exact",
+      "informal_claim": "Hoeffding concentration for a single arm's empirical mean.",
+      "lean_summary": "P(|mu_hat_a - p_a| >= eps) <= 2 exp(-2N eps^2). Uses sub-Gaussian MGF bounds and the product-measure independence structure.",
+      "gap_note": "This is a genuine measure-theoretic theorem in the bandit probability space.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Bandits.BanditConcentration",
+      "name": "all_arms_concentration",
+      "status": "exact",
+      "informal_claim": "Uniform concentration over all K arms via union bound.",
+      "lean_summary": "P(exists a, |mu_hat_a - p_a| >= eps) <= 2K exp(-2N eps^2). Union bound over K arms applied to arm_mean_concentration.",
+      "gap_note": "This is a genuine probability-space theorem.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Exploration.BatchUCBVI",
+      "name": "sum_sqrt_le_sqrt_card_mul_sum",
+      "status": "exact",
+      "informal_claim": "Cauchy-Schwarz for square root sums.",
+      "lean_summary": "sum sqrt(a_i) <= sqrt(|s| * sum a_i). Derived from the discrete Cauchy-Schwarz inequality (sq_sum_le_card_mul_sum_sq) with f_i = sqrt(a_i).",
+      "gap_note": "This is a genuine algebraic inequality.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Exploration.BatchUCBVI",
+      "name": "FiniteHorizonMDP.pigeonhole_bonus_bound",
+      "status": "exact",
+      "informal_claim": "Total bonus bound via pigeonhole + Cauchy-Schwarz.",
+      "lean_summary": "sum_i sum_{n=1}^{N(i)} 1/sqrt(n) <= 2 sqrt(|iota| * K) where K >= sum N(i). Chains the harmonic-sqrt telescoping (sum_inv_sqrt_le) with Cauchy-Schwarz for sqrt-sums (sum_sqrt_le_sqrt_card_mul_sum).",
+      "gap_note": "This is a genuine algebraic theorem used in the UCBVI bonus analysis.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.LinearMDP.Regret",
+      "name": "FiniteHorizonMDP.ucbvi_lin_regret_from_bonus_hypotheses",
+      "status": "wrapper",
+      "informal_claim": "UCBVI-Lin regret bound from supplied bonus hypotheses.",
+      "lean_summary": "Performs only the final sum-and-transitivity step once the per-episode regret bound and total bonus bound are supplied.",
+      "gap_note": "Optimism and elliptical-potential analysis are assumed wholesale; the theorem does not derive those ingredients in-file.",
+      "missing_lemmas": [
+        "Confidence-set optimism proof",
+        "Per-episode bonus decomposition connecting the elliptical potential to the UCBVI bonus structure (the elliptical potential itself is now fully proved in elliptical_potential_unconditional)"
+      ]
+    },
+    {
+      "module": "RLGeneralization.MDP.BanachFixedPoint",
+      "name": "FiniteMDP.actionValueFixedPoint_isActionValueOf",
+      "status": "exact",
+      "informal_claim": "Banach fixed point of the policy Bellman operator is a Bellman-consistent action-value function.",
+      "lean_summary": "Transports the policy Bellman Q-evaluation operator to a complete PiLp infinity space, applies Banach's theorem, and pulls the fixed point back to the original action-value function space.",
+      "gap_note": "This is a genuine existence theorem for policy evaluation fixed points.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.MDP.BanachFixedPoint",
+      "name": "FiniteMDP.exists_actionValue_fixedPoint",
+      "status": "exact",
+      "informal_claim": "Every stochastic policy admits an action-value fixed point.",
+      "lean_summary": "Packages the Banach fixed-point construction into an existential theorem for Bellman-consistent policy action-values.",
+      "gap_note": "This is a genuine existence result, complementary to the older uniqueness theorem.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.MDP.BanachFixedPoint",
+      "name": "FiniteMDP.tendsto_iterate_actionValueFixedPointQSpace",
+      "status": "exact",
+      "informal_claim": "Iterates of the transported policy Bellman operator converge to the Banach fixed point.",
+      "lean_summary": "Applies Mathlib's contraction-mapping convergence theorem on the complete PiLp infinity model for Q-functions.",
+      "gap_note": "This is a genuine metric-space convergence theorem for policy evaluation iterates.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.MDP.BanachFixedPoint",
+      "name": "FiniteMDP.optimalQFixedPoint_isBellmanOptimalQ",
+      "status": "exact",
+      "informal_claim": "Banach fixed point of the Bellman optimality operator is a Bellman-optimal Q-function.",
+      "lean_summary": "Transports the Bellman optimality operator to the complete PiLp infinity space, applies Banach's theorem, and pulls the fixed point back to a genuine Bellman-optimal action-value function.",
+      "gap_note": "This is a genuine existence theorem for Bellman-optimal Q fixed points.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.MDP.BanachFixedPoint",
+      "name": "FiniteMDP.exists_bellmanOptimalQ_fixedPoint",
+      "status": "exact",
+      "informal_claim": "Every discounted finite MDP admits a Bellman-optimal Q fixed point.",
+      "lean_summary": "Packages the Banach optimality construction into an existential theorem for Bellman-optimal action values.",
+      "gap_note": "This is a genuine optimal-control existence theorem.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.BilinearRank.Auxiliary",
+      "name": "FiniteHorizonMDP.bellman_error_le_of_rank",
+      "status": "exact",
+      "informal_claim": "Bellman-rank bilinear form is bounded by one under unit-norm embeddings.",
+      "lean_summary": "Derives the Bellman-error bound directly from the bilinear decomposition and finite-dimensional Cauchy-Schwarz.",
+      "gap_note": "This is a genuine trusted auxiliary theorem.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.BilinearRank.Basic",
+      "name": "FiniteHorizonMDP.golf_suboptimality_from_average_bellman_error",
+      "status": "wrapper",
+      "informal_claim": "GOLF suboptimality wrapper from average Bellman error control.",
+      "lean_summary": "Performs only the final transitivity step from a supplied average Bellman-error bound to epsilon-suboptimality.",
+      "gap_note": "The actual GOLF content, including optimism, version-space shrinkage, and probability-space control, remains external.",
+      "missing_lemmas": [
+        "Uniform convergence over the hypothesis class",
+        "Version-space elimination argument"
+      ]
+    },
+    {
+      "module": "RLGeneralization.BilinearRank.Basic",
+      "name": "FiniteHorizonMDP.bellman_rank_trivial_dichotomy",
+      "status": "vacuous",
+      "informal_claim": "Trivial Bellman-rank dichotomy.",
+      "lean_summary": "Shows only that either the stored rank parameter is positive or a degenerate zero-dimensional case forces the summed Bellman errors to vanish.",
+      "gap_note": "This is too weak to count as a substantive Bellman-rank theorem.",
+      "missing_lemmas": [
+        "A genuine Bellman-rank dimension bound with algorithmic consequences"
+      ]
+    },
+    {
+      "module": "RLGeneralization.LinearMDP.EllipticalPotential",
+      "name": "FiniteHorizonMDP.elliptical_potential_conditional",
+      "status": "conditional",
+      "informal_claim": "Elliptical-potential bound from determinant control.",
+      "lean_summary": "Proves the analytic min-versus-log chaining once the determinant/log-sum bound is supplied.",
+      "gap_note": "The key determinant/eigenvalue control still enters as a hypothesis, so the main analytic content is not fully internalized. Superseded by elliptical_potential_unconditional which discharges all hypotheses.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.PolicyOptimization.CPI",
+      "name": "FiniteMDP.expectedAdvantage_self_zero",
+      "status": "exact",
+      "informal_claim": "A policy has zero expected advantage under its own action-value function.",
+      "lean_summary": "Specializes the one-step performance-difference identity to a policy against itself and simplifies the Bellman equation.",
+      "gap_note": "This is a genuine helper theorem for the CPI mixture analysis.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.PolicyOptimization.CPI",
+      "name": "FiniteMDP.mixturePolicy_expectedAdvantage",
+      "status": "exact",
+      "informal_claim": "The mixture-policy expected advantage equals `\u03b1` times the new-policy expected advantage.",
+      "lean_summary": "Uses linearity of finite sums together with vanishing self-advantage to isolate the `\u03c0_new` contribution.",
+      "gap_note": "This is a genuine algebraic lemma for CPI.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.PolicyOptimization.CPI",
+      "name": "FiniteMDP.cpi_resolvent_identity",
+      "status": "exact",
+      "informal_claim": "The CPI mixture value gap satisfies a resolvent equation.",
+      "lean_summary": "Combines the one-step performance-difference identity with the mixture expected-advantage lemma to derive the exact Bellman-style equation for `V^{\u03c0_mix} - V^\u03c0`.",
+      "gap_note": "This is a genuine theorem deriving the mixture-policy comparison identity in-file.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.PolicyOptimization.CPI",
+      "name": "FiniteMDP.cpi_improvement_bound",
+      "status": "exact",
+      "informal_claim": "Resolvent norm bound for the CPI mixture value gap.",
+      "lean_summary": "Applies the resolvent norm lemma to the CPI mixture identity to bound the pointwise value gap by `\u03b1/(1-\u03b3)` times the sup norm of the expected advantage.",
+      "gap_note": "This is a genuine bound proved from existing resolvent infrastructure.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.MDP.PolicyIteration",
+      "name": "FiniteMDP.policy_improvement_sandwich",
+      "status": "exact",
+      "informal_claim": "A genuine policy-improvement step satisfies TQ_k \u2264 Q_{k+1} \u2264 Q*.",
+      "lean_summary": "Constructs state values from policy evaluation Q-functions, proves greedy value improvement, lifts it to Q-values, and derives the full sandwich inequality.",
+      "gap_note": "This is a genuine policy-iteration step theorem.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.MDP.PolicyIteration",
+      "name": "FiniteMDP.policy_iteration_convergence",
+      "status": "exact",
+      "informal_claim": "Policy iteration converges geometrically to a Bellman-optimal fixed point.",
+      "lean_summary": "Combines the new policy-improvement sandwich theorem with the existing sandwich contraction argument to obtain the geometric convergence rate for the evaluated greedy sequence.",
+      "gap_note": "This is a genuine convergence theorem for the abstract policy-iteration sequence it states.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.PolicyOptimization.CPI",
+      "name": "FiniteMDP.cpi_monotonic_improvement",
+      "status": "exact",
+      "informal_claim": "Pointwise monotonic improvement of the CPI mixture under nonnegative expected advantage.",
+      "lean_summary": "Applies the one-sided resolvent bound to the negated CPI value gap to show the mixture policy does not underperform `\u03c0` at any state when the expected advantage is nonnegative.",
+      "gap_note": "This is a genuine monotonic-improvement theorem.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.PolicyOptimization.Optimality",
+      "name": "FiniteMDP.gradient_domination_nonneg",
+      "status": "exact",
+      "informal_claim": "Gradient-domination coefficient is nonnegative.",
+      "lean_summary": "Proves the nonnegativity of the gradient-domination parameter from the structure fields.",
+      "gap_note": "This is a genuine algebraic fact for the gradient-domination infrastructure.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.LQR.Basic",
+      "name": "LQRInstance.stageCost_nonneg",
+      "status": "exact",
+      "informal_claim": "LQR stage cost is nonnegative.",
+      "lean_summary": "Proves nonnegativity of the quadratic stage cost from positive-semidefiniteness of Q and R matrices.",
+      "gap_note": "This is a genuine algebraic fact for the LQR infrastructure.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.ImitationLearning.Basic",
+      "name": "ImitationSetting.behavior_cloning_bound_from_pdl",
+      "status": "wrapper",
+      "informal_claim": "Behavior-cloning suboptimality bound from a supplied performance-difference inequality.",
+      "lean_summary": "Performs only the final algebraic rewrite from an assumed PDL-style bound to the `H^2 \u03b5` form.",
+      "gap_note": "The state-distribution mismatch argument is not derived in the file.",
+      "missing_lemmas": [
+        "Per-step classification-error to advantage bridge",
+        "Distribution-shift argument over the learner trajectory"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModelCore",
+      "name": "FiniteMDP.samples_iIndepFun",
+      "status": "exact",
+      "informal_claim": "Coordinate projections in the generative-model product space are independent.",
+      "lean_summary": "Uses Mathlib's product-measure independence theorem for the sample projections.",
+      "gap_note": "This is a genuine measure-theoretic theorem inside a trusted module.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModelCore",
+      "name": "FiniteMDP.indicator_expectation",
+      "status": "exact",
+      "informal_claim": "The expectation of a transition indicator equals the transition probability.",
+      "lean_summary": "Computes the PMF integral exactly as a finite sum.",
+      "gap_note": "This is a genuine measure-theoretic theorem inside a trusted module.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModelCore",
+      "name": "FiniteMDP.generative_model_pac",
+      "status": "exact",
+      "informal_claim": "PAC event for the generative model.",
+      "lean_summary": "Builds the product-space concentration bound in-file and feeds it through the existing union-bound theorem.",
+      "gap_note": "This is a genuine probability-space theorem inside a trusted module.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_from_generative_model",
+      "status": "weaker",
+      "informal_claim": "End-to-end minimax reduction on the good event from the generative model.",
+      "lean_summary": "Instantiates the deterministic minimax core with the empirical kernel on an explicitly assumed good event.",
+      "gap_note": "This is the deterministic reduction only; it does not package the probabilistic PAC layer and approximate-value hypotheses into a single final theorem. Superseded by later capstones in the same file.",
+      "missing_lemmas": [
+        "A benchmark-grade end-to-end theorem that combines the PAC event with the approximate-model value hypotheses"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_value_gap_high_probability",
+      "status": "weaker",
+      "informal_claim": "High-probability value-gap bound for the empirical generative-model estimator.",
+      "lean_summary": "Combines the in-file PAC event with the empirical-kernel good-event reduction to bound the value gap on a high-probability event.",
+      "gap_note": "The theorem still assumes that, for each sample point, the approximate-model policies and value functions satisfy the stated Bellman/value hypotheses; it does not derive those objects from the data. Superseded by later capstones in the same file.",
+      "missing_lemmas": [
+        "Construction of the approximate-model policies/value functions from the empirical kernel with the required Bellman/value hypotheses"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_value_gap_high_probability_same_reward",
+      "status": "weaker",
+      "informal_claim": "High-probability value-gap bound for the canonical empirical approximate MDP with true rewards.",
+      "lean_summary": "Specializes the previous high-probability wrapper to the canonical empirical approximate MDP, removing separate reward-alignment plumbing.",
+      "gap_note": "The theorem is still conditional on sample-dependent Bellman/value hypotheses for the policies and value functions; only the empirical-model packaging is canonicalized. Superseded by later capstones in the same file.",
+      "missing_lemmas": [
+        "Construction of the sample-dependent policies/value functions for the canonical empirical approximate MDP with the required Bellman/value hypotheses"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_from_empirical_bellman_fixed_point_good_event",
+      "status": "weaker",
+      "informal_claim": "Deterministic minimax reduction on the good event from an empirical Bellman fixed point.",
+      "lean_summary": "Uses the canonical empirical model plus optimal-policy existence for an assumed empirical Bellman fixed point to derive the approximate greedy-policy side automatically.",
+      "gap_note": "The reference-side approximate value function and the empirical Bellman fixed point are still assumed, not constructed from data. Superseded by later capstones in the same file.",
+      "missing_lemmas": [
+        "Construction of the empirical Bellman fixed point",
+        "Construction of the reference-policy value in the empirical model"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_value_gap_high_probability_from_empirical_bellman_fixed_point",
+      "status": "weaker",
+      "informal_claim": "High-probability value-gap bound from an empirical Bellman fixed point.",
+      "lean_summary": "Packages the exact PAC event with a deterministic reduction that derives the empirical greedy-policy side from an assumed Bellman fixed point of the canonical empirical model.",
+      "gap_note": "This removes the free empirical greedy-policy/value and dominance hypotheses, but it still assumes a sample-dependent empirical Bellman fixed point and a reference-side empirical value function. Superseded by later capstones in the same file.",
+      "missing_lemmas": [
+        "Construction of the empirical Bellman fixed point",
+        "Construction of the reference-policy value in the empirical model"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_from_empirical_Q_fixed_points_good_event",
+      "status": "weaker",
+      "informal_claim": "Deterministic minimax reduction on the good event from empirical policy-evaluation and optimality fixed points.",
+      "lean_summary": "Further reduces the deterministic minimax theorem by deriving the reference-side empirical value from a policy-evaluation `Q` fixed point, while still deriving the empirical greedy side from an empirical Bellman fixed point.",
+      "gap_note": "This removes the free reference-side empirical value witness, but it still assumes both the reference-policy evaluation fixed point and the empirical Bellman-optimal fixed point.",
+      "missing_lemmas": [
+        "Construction of the empirical policy-evaluation fixed point for the reference policy",
+        "Construction of the empirical Bellman fixed point"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_value_gap_high_probability_from_empirical_Q_fixed_points",
+      "status": "weaker",
+      "informal_claim": "High-probability value-gap bound from empirical policy-evaluation and optimality fixed points.",
+      "lean_summary": "Packages the exact PAC event with a deterministic reduction that derives the reference-side empirical value from a policy-evaluation `Q` fixed point and the empirical greedy side from a Bellman-optimal fixed point.",
+      "gap_note": "This is a stronger end-to-end wrapper because both empirical comparison objects are canonicalized from `Q`-fixed points, but it still assumes those fixed points instead of constructing them inside the file. Superseded by later capstones in the same file.",
+      "missing_lemmas": [
+        "Construction of the empirical policy-evaluation fixed point for the reference policy",
+        "Construction of the empirical Bellman fixed point"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_from_empirical_eval_and_bellman_fixed_points_good_event",
+      "status": "weaker",
+      "informal_claim": "Deterministic minimax reduction on the good event from a constructed empirical policy-evaluation fixed point and an empirical Bellman-optimal fixed point.",
+      "lean_summary": "Uses the new Banach fixed-point bridge to construct the reference-policy empirical action-value fixed point canonically, leaving only the empirical Bellman-optimal fixed point on the greedy side as an explicit hypothesis.",
+      "gap_note": "This removes the free reference-side policy-evaluation fixed point from the theorem surface, but it still assumes the empirical Bellman-optimal fixed point. Superseded by later capstones in the same file.",
+      "missing_lemmas": [
+        "Construction of the empirical Bellman fixed point"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_value_gap_high_probability_from_empirical_eval_and_bellman_fixed_point",
+      "status": "weaker",
+      "informal_claim": "High-probability value-gap bound from a constructed empirical policy-evaluation fixed point and an empirical Bellman-optimal fixed point.",
+      "lean_summary": "Packages the exact PAC event with the strengthened deterministic reduction that constructs the reference-policy empirical fixed point canonically from Banach's theorem.",
+      "gap_note": "This strengthens the end-to-end empirical-model wrapper by removing the reference-side fixed-point hypothesis; only the empirical Bellman-optimal fixed point remains external.",
+      "missing_lemmas": [
+        "Construction of the empirical Bellman fixed point"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_value_gap_high_probability_from_empirical_fixed_points",
+      "status": "weaker",
+      "informal_claim": "High-probability value-gap bound with canonical empirical policy-evaluation and optimality fixed points.",
+      "lean_summary": "Uses Banach fixed-point constructions on both the empirical model and the original MDP to replace the free empirical Bellman-optimal witness with the canonical empirical greedy policy and its canonical true-model value.",
+      "gap_note": "The theorem now constructs both empirical-model fixed points internally, but it still stops at the Hoeffding-style value-gap rate rather than the sharper Bernstein-sensitive minimax theorem.",
+      "missing_lemmas": [
+        "Variance-sensitive Bellman-error concentration yielding the sharp minimax rate"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.pac_rl_generative_model",
+      "status": "weaker",
+      "informal_claim": "PAC sample complexity for the generative model.",
+      "lean_summary": "Inverts the Hoeffding-based capstone theorem: given \u03b5 > 0, \u03b4 > 0, \u03b3 > 0, and any reference policy, there exists N\u2080 such that for N \u2265 N\u2080, the empirical greedy policy is \u03b5-optimal with probability \u2265 1-\u03b4.",
+      "gap_note": "Uses the Hoeffding-based capstone, giving a polynomial rather than log-based sample complexity. Still the first formally verified finite-sample PAC bound for RL.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.pac_rl_generative_model_optimal",
+      "status": "weaker",
+      "informal_claim": "Paper-ready PAC theorem using the optimal value function V*.",
+      "lean_summary": "Constructs the optimal value function V* via Banach fixed point, proves it dominates all policies, and applies pac_rl_generative_model to get the PAC guarantee.",
+      "gap_note": "Existential sample complexity (\u2203 N\u2080). The polynomial rate is weaker than the intended O(log/\u03b5\u00b2) target bound but is the first formally verified statement.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.pac_rl_generative_model_bernstein",
+      "status": "weaker",
+      "informal_claim": "PAC sample complexity with Bernstein log-rate.",
+      "lean_summary": "When N \u2265 log(2|S|\u00b2|A|/\u03b4)/bernsteinCoeff(pac_eps_0 \u03b5), the empirical greedy policy is \u03b5-optimal with probability \u2265 1-\u03b4. Uses the Bernstein capstone with uniform variance bound p(1-p) \u2264 1/4.",
+      "gap_note": "Achieves O(log(1/\u03b4)) rate via Bernstein. Uses uniform variance bound 1/4 rather than the exact per-entry Bernoulli variance p(1-p), so the constant factor is not sharp.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.MDP.ValueIteration",
+      "name": "FiniteMDP.value_iteration_epsilon_optimal_constructed",
+      "status": "exact",
+      "informal_claim": "Self-contained \u03b5-optimal value iteration via a constructed Bellman-optimal fixed point.",
+      "lean_summary": "After K \u2265 log(C/\u03b5)/(1-\u03b3) iterations, constructs the greedy-policy value function via Banach fixed point and proves it is 2\u03b5/(1-\u03b3)-optimal.",
+      "gap_note": "Self-contained: no external V_greedy witness needed. Constructs \u03c0_K, Q_\u03c0K, V_greedy internally.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.MDP.OccupancyMeasure",
+      "name": "FiniteMDP.pdl_normalized",
+      "status": "exact",
+      "informal_claim": "Normalized Kakade-Langford performance-difference identity.",
+      "lean_summary": "V^\u03c0(s\u2080) - V^{\u03c0'}(s\u2080) = (1-\u03b3)\u207b\u00b9 \u00b7 \u2211_s d^\u03c0(s\u2080,s) \u00b7 E_\u03c0[A^{\u03c0'}(s)] where d^\u03c0 is the normalized state-visitation distribution summing to 1.",
+      "gap_note": "Matches the normalized PDL form with the (1-\u03b3)\u207b\u00b9 factor and normalized occupancy measure.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.MDP.OccupancyMeasure",
+      "name": "FiniteMDP.stateOccupancy_sum_one",
+      "status": "exact",
+      "informal_claim": "Normalized occupancy distribution sums to 1.",
+      "lean_summary": "\u2211_s d^\u03c0(s\u2080, s) = 1 where d^\u03c0(s\u2080,s) = (1-\u03b3)\u00b7\u2211_{t\u22650} \u03b3^t P^t(s\u2080,s).",
+      "gap_note": "Exact.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.minimax_pac_bernstein_composed",
+      "status": "weaker",
+      "informal_claim": "End-to-end minimax PAC with Bernstein concentration.",
+      "lean_summary": "Composes Bernstein per-entry concentration with the deterministic minimax reduction to give P(V_ref - V_hat ≤ 2γR_max|S|ε_T/(1-γ)²) ≥ 1-δ when N ≥ log(2K/δ)/c.",
+      "gap_note": "Uses the weaker uniform variance bound p(1-p) ≤ 1/4 instead of the exact variance.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Concentration.GenerativeModel",
+      "name": "FiniteMDP.pac_rl_generative_model_bernstein_existential",
+      "status": "weaker",
+      "informal_claim": "Existential PAC sample complexity with Bernstein log-rate.",
+      "lean_summary": "Wraps pac_rl_generative_model_bernstein with existential N₀ = O(log(1/δ)), removing the free sample-count hypothesis.",
+      "gap_note": "Uses uniform variance 1/4 bound. The existential N₀ makes the sample-complexity statement self-contained.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.ucb_index_dominated_after_sufficient_pulls",
+      "status": "exact",
+      "informal_claim": "Under concentration, a sufficiently-explored suboptimal arm's UCB index is dominated by μ*.",
+      "lean_summary": "Chains confidence_threshold with ucb_index_le_opt_mean: if n ≥ 8L/Δ² and |μ̂-μ| ≤ √(2L/n), then μ̂ + √(2L/n) ≤ μ*.",
+      "gap_note": "Genuine algebraic chain completing the UCB index domination argument.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.LinearMDP.EllipticalPotential",
+      "name": "elliptical_potential_from_det_bound",
+      "status": "conditional",
+      "informal_claim": "Elliptical potential with separated determinant hypotheses.",
+      "lean_summary": "Splits the opaque log-sum hypothesis into: (1) telescoping product = det_val, and (2) det_val ≤ ((d+T)/d)^d. Derives the original bound from these.",
+      "gap_note": "Separates the matrix determinant lemma (telescoping) from the AM-GM eigenvalue bound. Both are now discharged by gramMatrixM_det_telescoping and det_le_trace_div_pow_of_posSemidef.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.LinearMDP.EllipticalPotential",
+      "name": "prod_le_arith_mean_pow",
+      "status": "exact",
+      "informal_claim": "AM-GM inequality: product ≤ (arithmetic mean)^d for nonneg reals.",
+      "lean_summary": "Derives ∏ aᵢ ≤ ((∑ aᵢ)/d)^d from geom_mean_le_arith_mean_weighted with uniform weights and rpow algebra.",
+      "gap_note": "Genuine standalone AM-GM inequality, fully proved from Mathlib's weighted AM-GM.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.LinearMDP.EllipticalPotential",
+      "name": "det_le_trace_div_pow_of_posSemidef",
+      "status": "exact",
+      "informal_claim": "For PSD matrices: det(A) ≤ (trace(A)/d)^d.",
+      "lean_summary": "Uses spectral theorem (det = ∏ eigenvalues, trace = ∑ eigenvalues), PSD eigenvalue nonnegativity, and AM-GM.",
+      "gap_note": "Genuine matrix analysis theorem connecting spectral theory with AM-GM.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.LinearMDP.EllipticalPotential",
+      "name": "elliptical_potential_from_gram",
+      "status": "exact",
+      "informal_claim": "Elliptical potential bound from Gram matrix PSD and telescoping hypotheses.",
+      "lean_summary": "Composes AM-GM det bound, trace bound, and eigenvalue theory. Remaining hypotheses: PSD (from Λ=I+∑φφᵀ) and telescoping product (from matrix determinant lemma).",
+      "gap_note": "AM-GM det bound and PSD are fully discharged. The telescoping product hypothesis is supplied by gramMatrixM_det_telescoping.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.LinearMDP.EllipticalPotential",
+      "name": "gramMatrixM_posSemidef",
+      "status": "exact",
+      "informal_claim": "The Gram matrix Λ = I + ΦᵀΦ is positive semidefinite.",
+      "lean_summary": "Decomposes Λ as identity + feature-Gram, uses PosSemidef.diagonal for I and posSemidef_conjTranspose_mul_self for ΦᵀΦ, combines via PosSemidef.add.",
+      "gap_note": "Genuine matrix analysis theorem using Mathlib's PSD API.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.LinearMDP.EllipticalPotential",
+      "name": "det_gramMatrixM_eq_prod_one_add_eigenvalues",
+      "status": "exact",
+      "informal_claim": "det(I + ΦᵀΦ) = ∏(1 + eigenvalue of ΦΦᵀ).",
+      "lean_summary": "Uses the Weinstein-Aronszajn identity det(I+AB) = det(I+BA) and the spectral decomposition of ΦΦᵀ to express the Gram matrix determinant as a product over eigenvalues.",
+      "gap_note": "Genuine matrix analysis theorem using Mathlib's spectral API.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.LinearMDP.EllipticalPotential",
+      "name": "gramMatrixM_det_telescoping",
+      "status": "exact",
+      "informal_claim": "Telescoping determinant product via eigenvalues of ΦΦᵀ.",
+      "lean_summary": "Provides nonneg reals x_t (eigenvalues of ΦΦᵀ) such that ∏(1+x_t) = det(Λ_{T+1}). Uses crossGram PSD for nonnegativity.",
+      "gap_note": "Genuine existence theorem packaging the eigenvalue decomposition.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.LinearMDP.EllipticalPotential",
+      "name": "elliptical_potential_unconditional",
+      "status": "exact",
+      "informal_claim": "Fully unconditional elliptical potential lemma: ∃ x_t ≥ 0, ∑ min(1, x_t) ≤ 2d·log(1+T/d).",
+      "lean_summary": "Composes gramMatrixM_det_telescoping, gramMatrixM_posSemidef, det_le_trace_div_pow_of_posSemidef, and gramMatrixM_trace_le_at_T to remove ALL hypotheses from elliptical_potential_conditional except the norm bound on feature vectors.",
+      "gap_note": "This is the fully self-contained version of the elliptical-potential bound.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.pull_count_le_of_selection_domination",
+      "status": "exact",
+      "informal_claim": "Pull-count bound from selection domination: if arm a cannot be selected once its running pull count reaches threshold, then pullCount ≤ threshold.",
+      "lean_summary": "Pure combinatorial counting argument on Fin T → Fin K. By induction on round number: if arm a is selected at round t, the running count was < threshold (otherwise h_not_selected contradicts the selection), so the count after selection is ≤ threshold.",
+      "gap_note": "Pure combinatorics, no probability or algorithm state. Fully proved.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.ucb_index_strictly_dominated",
+      "status": "exact",
+      "informal_claim": "Strict UCB index domination: if 8L/Δ² < n strictly, then μ̂ + √(2L/n) < μ*.",
+      "lean_summary": "Strict version of ucb_index_dominated_after_sufficient_pulls. The strict inequality 8L/Δ² < n gives √(2L/n) < Δ/2 strictly (via sqrt monotonicity), then μ̂ + √(2L/n) ≤ μ + 2√(2L/n) < μ + Δ = μ*.",
+      "gap_note": "Genuine algebraic chain with strict inequalities, needed for the counting argument to resolve UCB tie-breaking.",
+      "missing_lemmas": []
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.ucb_gap_dependent_regret_full",
+      "status": "conditional",
+      "informal_claim": "Composed UCB gap-dependent regret bound under selection rule and strict domination hypotheses.",
+      "lean_summary": "Composes pull_count_le_of_selection_domination with fiberwise regret decomposition. Under UCB selection rule (I(t) has maximal index) and strict index domination after threshold(a) pulls, gives R_T ≤ ∑_a threshold(a)·Δ_a.",
+      "gap_note": "The UCB selection rule and index domination are taken as hypotheses. The counting argument and regret composition are fully proved. The caller instantiates threshold(a) = ⌈8L/Δ²⌉₊+1 and uses ucb_index_strictly_dominated under the good event.",
+      "missing_lemmas": [
+        "Connection from ucbGoodEvent to the actual running empirical means"
+      ]
+    },
+    {
+      "module": "RLGeneralization.Bandits.UCB",
+      "name": "BanditInstance.ucb_gap_dependent_regret_presentation",
+      "status": "conditional",
+      "informal_claim": "UCB gap-dependent regret in presentation form: R_T ≤ ∑(8L/Δ + 2Δ).",
+      "lean_summary": "Instantiates ucb_gap_dependent_regret_full with canonical threshold ⌈8L/Δ²⌉₊+1 and simplifies using ceiling arithmetic to give R_T ≤ ∑(8L/Δ + 2Δ). The extra Δ term comes from the integer ceiling in the counting argument.",
+      "gap_note": "The UCB selection rule and concentration event remain as hypotheses. The algebraic composition and ceiling simplification are fully proved.",
+      "missing_lemmas": [
+        "Connection from ucbGoodEvent to the actual running empirical means"
+      ]
+    }
+  ]
+}
