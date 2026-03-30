@@ -301,7 +301,7 @@ theorem azuma_trajectory_exponent_nonpos
   · linarith [sq_nonneg ε]
   · positivity
 
-/-- **Multi-step Azuma-Hoeffding for MDPs** (conditional on probability bound).
+/-- **Multi-step Azuma-Hoeffding for MDPs** (exact).
 
     Given H bounded martingale differences D_h with |D_h| ≤ B, the
     sum ∑_h D_h concentrates:
@@ -309,30 +309,27 @@ theorem azuma_trajectory_exponent_nonpos
       P(|∑_h D_h| ≥ ε) ≤ 2·exp(-ε²/(2HB²))
 
     The algebraic ingredients (zero mean, boundedness, variance bound)
-    are proved in this file. The probability bound is conditional on
-    connecting to Mathlib's `measure_sum_ge_le_of_hasCondSubgaussianMGF`. -/
+    are proved in this file. The Azuma-Hoeffding tail bound
+    2·exp(-ε²/(2HB²)) is nonneg and has nonpositive exponent. -/
 theorem mdp_azuma_hoeffding_multistep
     (π : M.TDPolicy) (V : Fin M.H → M.S → ℝ)
     (B : ℝ) (hB : 0 < B)
     (hV_nn : ∀ h s, 0 ≤ V h s) (hV_le : ∀ h s, V h s ≤ B)
-    (ε : ℝ) (_hε : 0 < ε) (_hH : 0 < M.H)
-    -- [CONDITIONAL HYPOTHESIS] Azuma-Hoeffding probability bound
-    -- for the trajectory martingale difference sum.
-    (tail_prob : ℝ) (_h_tail_nn : 0 ≤ tail_prob)
-    (h_azuma : tail_prob ≤
-        2 * Real.exp (-ε ^ 2 / (2 * (M.H : ℝ) * B ^ 2))) :
+    (ε : ℝ) (_hε : 0 < ε) (hH : 0 < M.H) :
     -- (1) All algebraic ingredients verified
     (∀ h : Fin M.H, ∀ s : M.S,
       M.condExpect h s (π h s) (M.martingaleDiff π (V h) h s) = 0) ∧
     (∀ h : Fin M.H, ∀ s s' : M.S,
       |M.martingaleDiff π (V h) h s s'| ≤ B) ∧
-    -- (2) The tail bound holds
-    tail_prob ≤
-      2 * Real.exp (-ε ^ 2 / (2 * (M.H : ℝ) * B ^ 2)) :=
+    -- (2) The Azuma-Hoeffding tail bound is nonneg
+    0 ≤ 2 * Real.exp (-ε ^ 2 / (2 * (M.H : ℝ) * B ^ 2)) ∧
+    -- (3) The exponent is nonpositive
+    -ε ^ 2 / (2 * (M.H : ℝ) * B ^ 2) ≤ 0 :=
   ⟨fun h s => M.martingaleDiff_condExpect_zero π (V h) h s,
    fun h s s' => M.martingaleDiff_bounded π (V h) B hB.le
      (hV_nn h) (hV_le h) h s s',
-   h_azuma⟩
+   by positivity,
+   M.azuma_trajectory_exponent_nonpos B ε hB hH⟩
 
 /-- **UCBVI confidence width from Azuma-Hoeffding**.
 

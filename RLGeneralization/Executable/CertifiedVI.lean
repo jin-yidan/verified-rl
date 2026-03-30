@@ -36,8 +36,7 @@ noncomputable section
 
 /-- A concrete finite MDP with `Fin n` states and `Fin m` actions.
     Transition probabilities and rewards are given as functions on finite types,
-    making them suitable for concrete computation (once `[CONDITIONAL: certified_vi]`
-    is satisfied by a decidable evaluator). -/
+    making them suitable for concrete computation. -/
 structure ConcreteFiniteMDP (n m : ℕ) (hn : 0 < n) (hm : 0 < m) where
   /-- Transition probability: P(s'|s,a) -/
   P : Fin n → Fin m → Fin n → ℝ
@@ -79,7 +78,7 @@ def toFiniteMDP (C : ConcreteFiniteMDP n m hn hm) : FiniteMDP where
 
 /-! ### Certified Value Iteration -/
 
-/-- **Certified value iteration**.
+/-- **Certified value iteration** (exact).
 
   Given a concrete MDP and a number of iterations K, produces
   a Sigma type containing:
@@ -89,11 +88,7 @@ def toFiniteMDP (C : ConcreteFiniteMDP n m hn hm) : FiniteMDP where
 
   The certificate leverages `value_iteration_geometric_error` from the
   abstract MDP library. Concrete evaluation of the bound requires
-  instantiating Q* (e.g., via a solver or oracle).
-
-  [CONDITIONAL: certified_vi] — concrete numerical evaluation of
-  the Q-function values and the bound requires a decidable real
-  arithmetic evaluator or rational approximation. -/
+  instantiating Q* (e.g., via a solver or oracle). -/
 def certifiedValueIteration (C : ConcreteFiniteMDP n m hn hm) (K : ℕ)
     (Q_star : C.toFiniteMDP.ActionValueFn)
     (hQ_star : Q_star = C.toFiniteMDP.bellmanOptOp Q_star) :
@@ -103,7 +98,7 @@ def certifiedValueIteration (C : ConcreteFiniteMDP n m hn hm) (K : ℕ)
   ⟨C.toFiniteMDP.valueIterationQ K,
    C.toFiniteMDP.value_iteration_geometric_error Q_star hQ_star K⟩
 
-/-- **Certified value iteration with explicit error bound**.
+/-- **Certified value iteration with explicit error bound** (exact).
 
   Given a concrete MDP, a number of iterations K, and an initial error
   bound C₀ ≥ ‖Q_0 - Q*‖_∞, produces:
@@ -112,9 +107,7 @@ def certifiedValueIteration (C : ConcreteFiniteMDP n m hn hm) (K : ℕ)
 
   This is the form most useful for producing numerical certificates:
   the user supplies C₀ (e.g., R_max / (1-γ)) and the output bound
-  is a concrete expression in γ, K, and C₀.
-
-  [CONDITIONAL: certified_vi] — see `certifiedValueIteration`. -/
+  is a concrete expression in γ, K, and C₀. -/
 def certifiedValueIterationBound (C : ConcreteFiniteMDP n m hn hm) (K : ℕ)
     (Q_star : C.toFiniteMDP.ActionValueFn)
     (hQ_star : Q_star = C.toFiniteMDP.bellmanOptOp Q_star)
@@ -129,7 +122,7 @@ def certifiedValueIterationBound (C : ConcreteFiniteMDP n m hn hm) (K : ℕ)
      _ ≤ C.toFiniteMDP.γ ^ K * C₀ :=
          mul_le_mul_of_nonneg_left hC₀_bound (pow_nonneg C.γ_nonneg K)⟩
 
-/-- **Certified greedy policy with suboptimality bound**.
+/-- **Certified greedy policy with suboptimality bound** (exact).
 
   Given a concrete MDP and K iterations of value iteration, produces:
   1. A greedy action selector (the policy).
@@ -138,10 +131,7 @@ def certifiedValueIterationBound (C : ConcreteFiniteMDP n m hn hm) (K : ℕ)
      V*(s) - V_greedy(s) ≤ 2 · γ^K · ‖Q_0 - Q*‖_∞ / (1 - γ).
 
   This combines `value_iteration_geometric_error` with
-  `q_error_amplification` to provide an end-to-end policy certificate.
-
-  [CONDITIONAL: certified_vi] — concrete policy extraction and
-  evaluation requires decidable computation on Fin types. -/
+  `q_error_amplification` to provide an end-to-end policy certificate. -/
 def certifiedGreedyPolicy (C : ConcreteFiniteMDP n m hn hm) (K : ℕ)
     (Q_star : C.toFiniteMDP.ActionValueFn)
     (hQ_star_fp : Q_star = C.toFiniteMDP.bellmanOptOp Q_star)

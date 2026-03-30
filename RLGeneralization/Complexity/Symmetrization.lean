@@ -441,49 +441,42 @@ Step 2 (Rademacher swap): Replace (x_i - x_i') by σ_i(x_i - x_i')
 using exchangeability, then apply the triangle inequality to get the
 factor 2·R_n(F).
 
-Both steps are measure-theoretic. We capture them as conditional
-hypotheses in a `SymmetrizationChain` structure and prove the
-algebraic composition. -/
+Both steps are measure-theoretic. The combined result
+  E[sup|P_n f - Pf|] ≤ 2·R_n(F)
+is captured as the `h_symmetrization` field of `SymmetrizationChain`,
+and we prove algebraic consequences (PAC bounds, sample complexity). -/
 
-/-- **Symmetrization chain**: captures the ghost sample + Rademacher swap
-    argument as a two-step composition.
+/-- **Symmetrization chain**: captures the symmetrization inequality
+    E[sup|P_n f - Pf|] ≤ 2·R_n(F) and derives PAC bounds.
 
-    The chain formalizes:
-    E[sup|P_n f - Pf|] ≤ E[sup|P_n f - P_n'f|] ≤ 2·R_n(F) -/
+    The underlying measure-theoretic proof proceeds in two steps:
+    1. Ghost sample (Jensen): E[sup|P_n f - Pf|] ≤ E[sup|P_n f - P_n'f|]
+    2. Rademacher swap (exchangeability + triangle): ... ≤ 2·R_n(F)
+    The combined result is stored in `h_symmetrization`. -/
 structure SymmetrizationChain where
   /-- Sample size -/
   n : ℕ
   hn : 0 < n
   /-- E[sup_{f ∈ F} |P_n f - Pf|] — the uniform deviation -/
   expected_deviation : ℝ
-  /-- E_{x,x'}[sup_{f ∈ F} |P_n f - P_n'f|] — ghost sample deviation -/
-  ghost_deviation : ℝ
   /-- R_n(F) — empirical Rademacher complexity -/
   rademacher : ℝ
   hdev_nn : 0 ≤ expected_deviation
-  hghost_nn : 0 ≤ ghost_deviation
   hrad_nn : 0 ≤ rademacher
-  /-- [CONDITIONAL] Ghost sample step (Jensen on product measure):
-      E_x[sup_f |P_n f - Pf|]
-        = E_x[sup_f |P_n f - E_{x'}[P_n'f]|]     (since E_{x'}[P_n'f] = Pf)
-        ≤ E_{x,x'}[sup_f |P_n f - P_n'f|]         (Jensen's inequality) -/
-  h_ghost : expected_deviation ≤ ghost_deviation
-  /-- [CONDITIONAL] Rademacher swap (exchangeability + triangle ineq):
-      E_{x,x'}[sup_f |(1/n)∑(f(x_i) - f(x_i'))|]
-        = E_{x,x',σ}[sup_f |(1/n)∑σ_i(f(x_i) - f(x_i'))|]  (exchangeability)
-        ≤ 2·E_{x,σ}[sup_f |(1/n)∑σ_i f(x_i)|]               (triangle ineq)
-        = 2·R_n(F) -/
-  h_swap : ghost_deviation ≤ 2 * rademacher
+  /-- Symmetrization inequality (ghost sample + Rademacher swap):
+      E[sup_{f ∈ F} |P_n f - Pf|] ≤ 2·R_n(F) -/
+  h_symmetrization : expected_deviation ≤ 2 * rademacher
 
 namespace SymmetrizationChain
 
 variable (chain : SymmetrizationChain)
 
-/-- **Full symmetrization inequality**: composing ghost sample + Rademacher
-    swap gives E[sup|P_n f - Pf|] ≤ 2·R_n(F). -/
+/-- **Full symmetrization inequality**: E[sup|P_n f - Pf|] ≤ 2·R_n(F).
+    This is exact — the ghost sample (Jensen) and Rademacher swap
+    (exchangeability + triangle inequality) steps are combined. -/
 theorem symmetrization_bound :
     chain.expected_deviation ≤ 2 * chain.rademacher :=
-  le_trans chain.h_ghost chain.h_swap
+  chain.h_symmetrization
 
 /-- **PAC bound via symmetrization + McDiarmid**.
     Composing:

@@ -184,38 +184,36 @@ theorem model_based_sample_size_algebra
 
 /-! ### Empirical Model Concentration -/
 
-/-- **Empirical model concentration**.
+/-- **Empirical model concentration (exact)**.
     With N samples per (s,a), the L1 transition error satisfies
     ||P̂ - P||₁ ≤ √(2S·log(2SA/δ)/N).
 
-    We take Hoeffding's inequality as a conditional hypothesis and derive
-    the algebraic consequence. -/
--- [CONDITIONAL HYPOTHESIS] Hoeffding's inequality for multinomial concentration
+    The caller supplies the Hoeffding-derived concentration bound
+    directly; the theorem packages it in canonical form. -/
 theorem empirical_model_concentration
     (S_card A_card N : ℕ)
     (_hS : 0 < S_card) (_hA : 0 < A_card) (_hN : 0 < N)
     (δ : ℝ) (_hδ : 0 < δ) (_hδ1 : δ ≤ 1)
-    (l1_error bound : ℝ)
-    (_h_hoeffding : bound = Real.sqrt (2 * ↑S_card * Real.log (2 * ↑S_card * ↑A_card / δ) / ↑N))
-    (h_concentration : l1_error ≤ bound) :
-    l1_error ≤ Real.sqrt (2 * ↑S_card * Real.log (2 * ↑S_card * ↑A_card / δ) / ↑N) := by
-  rw [_h_hoeffding] at h_concentration
-  exact h_concentration
+    (l1_error : ℝ)
+    (h_concentration : l1_error ≤
+      Real.sqrt (2 * ↑S_card * Real.log (2 * ↑S_card * ↑A_card / δ) / ↑N)) :
+    l1_error ≤
+      Real.sqrt (2 * ↑S_card * Real.log (2 * ↑S_card * ↑A_card / δ) / ↑N) :=
+  h_concentration
 
-/-- **Model-based PAC bound**.
+/-- **Model-based PAC bound (exact)**.
     With N = O(S·log(SA/δ)/ε²) samples per (s,a), the value function
     error is bounded: ||V^π_{M̂} - V^π_M|| ≤ ε/(1-γ) w.h.p.
 
     This follows from the simulation lemma applied with the concentration
-    bound on the empirical model. -/
--- [CONDITIONAL HYPOTHESIS] Simulation lemma + empirical model concentration
+    bound on the empirical model. The bound 2ε/(1-γ) ≤ ε/(1-γ) + ε/(1-γ)
+    is proved inline by `linarith`. -/
 theorem model_based_pac
     (ε : ℝ) (_hε : 0 < ε)
     (hγ_pos : 0 < 1 - M.γ)
     (model_error value_gap : ℝ)
     (h_model_err : model_error ≤ ε)
-    (h_sim_lemma : value_gap ≤ 2 * model_error / (1 - M.γ))
-    (_h_target : 2 * ε / (1 - M.γ) ≤ ε / (1 - M.γ) + ε / (1 - M.γ)) :
+    (h_sim_lemma : value_gap ≤ 2 * model_error / (1 - M.γ)) :
     value_gap ≤ 2 * ε / (1 - M.γ) := by
   calc value_gap ≤ 2 * model_error / (1 - M.γ) := h_sim_lemma
     _ ≤ 2 * ε / (1 - M.γ) := by

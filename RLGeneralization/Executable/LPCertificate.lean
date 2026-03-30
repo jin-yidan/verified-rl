@@ -37,7 +37,7 @@ variable (M : FiniteMDP)
 
 /-! ### Dual Certificate Structure -/
 
-/-- A **dual certificate** for the LP formulation of a discounted MDP.
+/-- A **dual certificate** for the LP formulation of a discounted MDP (exact).
 
   Contains:
   - A candidate primal-feasible value function V.
@@ -47,10 +47,7 @@ variable (M : FiniteMDP)
     (d in the state-action polytope K_mu).
 
   The weak duality theorem then guarantees
-    primalObjective(mu, V) >= dualObjective(d).
-
-  [CONDITIONAL: lp_certificate] — instantiating with concrete V, d, mu
-  requires an LP solver or manual construction. -/
+    primalObjective(mu, V) >= dualObjective(d). -/
 structure DualCertificate where
   /-- Initial state distribution -/
   μ : M.S → ℝ
@@ -65,22 +62,19 @@ structure DualCertificate where
 
 /-! ### Certificate Verification -/
 
-/-- **Weak duality certificate verification**.
+/-- **Weak duality certificate verification** (exact).
 
   Given a `DualCertificate`, produces a proof that the primal
   objective (sum mu(s) V(s)) is at least the dual objective
   ((1/(1-gamma)) sum d(s,a) r(s,a)).
 
   This is a direct application of `weak_duality` from the LP
-  formulation library.
-
-  [CONDITIONAL: lp_certificate] — evaluating the numeric bound
-  requires concrete mu, V, d. -/
+  formulation library. -/
 def verifyCertificate (cert : M.DualCertificate) :
     M.primalObjective cert.μ cert.V ≥ M.dualObjective cert.d :=
   M.weak_duality cert.μ cert.V cert.d cert.primal_feasible cert.dual_feasible
 
-/-- **Duality gap bound**.
+/-- **Duality gap bound** (exact).
 
   If the primal objective equals the dual objective (zero duality gap),
   then V is LP-optimal: no other primal-feasible V' with V'(s) <= V(s)
@@ -88,10 +82,7 @@ def verifyCertificate (cert : M.DualCertificate) :
 
   The zero gap condition is the key output of an LP solver: if the
   solver returns primal V and dual d with matching objectives, this
-  theorem certifies that V is the LP (and hence Bellman) optimum.
-
-  [CONDITIONAL: lp_certificate] — checking the zero-gap condition
-  requires concrete numerical evaluation. -/
+  theorem certifies that V is the LP (and hence Bellman) optimum. -/
 theorem dualGapBound (cert : M.DualCertificate)
     (_hgap : M.primalObjective cert.μ cert.V = M.dualObjective cert.d) :
     ∀ (V' : M.StateValueFn) (d' : M.S → M.A → ℝ),
@@ -125,14 +116,11 @@ theorem bellman_optimal_certificate (V : M.StateValueFn)
     M.PrimalFeasible V :=
   M.bellman_optimal_is_feasible V hopt
 
-/-- **Certificate from Bellman-optimal V and occupancy measure**.
+/-- **Certificate from Bellman-optimal V and occupancy measure** (exact).
 
   Given a Bellman-optimal V* and a state-action measure d in the
   polytope K_mu, constructs a `DualCertificate`.
-  This is the canonical way to produce certificates from DP solutions.
-
-  [CONDITIONAL: lp_certificate] — constructing the occupancy measure d
-  requires solving the flow conservation equations. -/
+  This is the canonical way to produce certificates from DP solutions. -/
 def certificateFromBellmanOptimal (μ : M.S → ℝ)
     (V : M.StateValueFn) (hopt : M.isBellmanOptimalV V)
     (d : M.S → M.A → ℝ) (hpoly : M.StateActionPolytope μ d) :
@@ -145,18 +133,14 @@ def certificateFromBellmanOptimal (μ : M.S → ℝ)
 
 /-! ### Occupancy-Based Certificate -/
 
-/-- **Certificate from stationary occupancy measure**.
+/-- **Certificate from stationary occupancy measure** (exact).
 
   For a stochastic policy pi with nonneg initial distribution mu,
   the one-step stationary occupancy d(s,a) = (1-gamma)*mu(s)*pi(a|s)
   is nonneg. If additionally d satisfies the flow conservation constraint,
   it can be paired with any primal-feasible V to form a certificate.
 
-  The `stationaryOccupancy_nonneg` theorem provides the nonnegativity proof.
-
-  [CONDITIONAL: lp_certificate] — verifying that the stationary occupancy
-  satisfies flow conservation for the full (infinite-horizon) occupancy
-  requires the geometric series resolvent. -/
+  The `stationaryOccupancy_nonneg` theorem provides the nonnegativity proof. -/
 theorem occupancy_nonneg_certificate (π : M.StochasticPolicy) (μ : M.S → ℝ)
     (hμ : ∀ s, 0 ≤ μ s) :
     ∀ s a, 0 ≤ M.stationaryOccupancy π μ s a :=

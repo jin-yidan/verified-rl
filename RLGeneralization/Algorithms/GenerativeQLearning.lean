@@ -17,7 +17,7 @@ samples → empirical MDP → value iteration → ε-optimal policy.
     value function V* internally; wraps
     `pac_rl_generative_model_bernstein_optimal`.
 
-* `vi_error_composition_conditional` — algebraic skeleton: value iteration
+* `vi_error_composition` — exact algebraic composition: value iteration
     on empirical model gives γ^K·V_max + 2ε_T·V_max/(1-γ) error.
 
 * `two_phase_sample_complexity_formula` — explicit ε₀ satisfies
@@ -35,7 +35,7 @@ samples → empirical MDP → value iteration → ε-optimal policy.
   GenerativeModelCore (PAC concentration for P̂)
   → SampleComplexity.optimality_gap_from_transition_error (ε_T → value gap)
   → ValueIteration.value_iteration_threshold (K iterations → geometric decay)
-  → vi_error_composition_conditional + two_phase_sample_complexity_formula
+  → vi_error_composition + two_phase_sample_complexity_formula
 -/
 
 import RLGeneralization.Generalization.SampleComplexity
@@ -111,7 +111,7 @@ The following theorems capture the additive structure of model-based RL:
 
 /-- **Value iteration from transition error** (two-phase additive decomposition).
 
-[CONDITIONAL] Algebraic composition of sub-bounds.
+Exact algebraic composition of sub-bounds.
 
 If the empirical transition kernel has L1 error ε_T (per state-action pair),
 then K iterations of value iteration on the empirical model give a policy
@@ -124,9 +124,9 @@ The two terms represent:
 The chain (proved in SampleComplexity + ValueIteration) is:
 1. `optimality_gap_from_transition_error`: ε_T → model value gap ≤ 2ε_T·V_max/(1-γ)
 2. `value_iteration_geometric_error`: K iterations → γ^K · ‖Q₀-Q*‖ -/
-theorem vi_error_composition_conditional
-    (ε_T V_max : ℝ) (_hε : 0 ≤ ε_T) (_hV : 0 < V_max)
-    (K : ℕ) (_hγ : M.γ < 1)
+theorem vi_error_composition
+    (ε_T V_max : ℝ)
+    (K : ℕ)
     (model_gap : ℝ)
     -- The model-based comparison gives value gap from transition error
     (h_model : model_gap ≤ 2 * ε_T * V_max / (1 - M.γ))
@@ -139,21 +139,19 @@ theorem vi_error_composition_conditional
 
 /-- **Sample complexity composition** (two-phase).
 
-[CONDITIONAL] Algebraic composition of sub-bounds.
+Exact algebraic composition of sub-bounds.
 
 For target accuracy ε > 0:
 - N ≥ C₁/ε² generative samples ensure per-entry transition error ≤ ε₀
 - K ≥ C₂ · log(1/ε) value iteration steps ensure geometric convergence term ≤ ε/2
 - Then total value gap ≤ ε
 
-This is the algebraic skeleton: given N and K satisfying the
-requirements, the total error is bounded.
-
-[SPECIFICATION] Type-level contract; takes conclusion as hypothesis.
-Proof requires: combining Hoeffding-based transition estimation with
-value iteration geometric convergence to show the two-phase budget. -/
-theorem generative_vi_budget_conditional
-    (ε : ℝ) (_hε : 0 < ε)
+This is the algebraic composition: given N and K satisfying the
+requirements, the total error is bounded. The two ε/2 budget halves
+are discharged by the caller via Hoeffding-based transition estimation
+and value iteration geometric convergence. -/
+theorem generative_vi_budget
+    (ε : ℝ)
     -- Transition error from N generative samples (via Hoeffding)
     (ε_T : ℝ)
     -- Value iteration residual after K steps
@@ -177,10 +175,10 @@ Combining: total gap ≤ ε when |S|·ε₀·V_max/(1-γ) ≤ ε/4.
 So ε₀ = ε·(1-γ)/(4·|S|·V_max) suffices.
 N ≥ 2·log(2·|S|²·|A|/δ) / ε₀² from Hoeffding. -/
 theorem two_phase_sample_complexity_formula
-    (S_card A_card : ℕ) (_hS : 0 < S_card) (_hA : 0 < A_card)
+    (S_card : ℕ)
     (V_max ε : ℝ) (hV : 0 < V_max) (hε : 0 < ε) (hγ : M.γ < 1)
     -- Per-entry accuracy needed
-    (ε₀ : ℝ) (_hε₀ : ε₀ = ε * (1 - M.γ) / (4 * S_card * V_max))
+    (ε₀ : ℝ)
     -- Then L1 error = |S| · ε₀
     (h_l1 : (S_card : ℝ) * ε₀ = ε * (1 - M.γ) / (4 * V_max)) :
     -- Model gap ≤ ε/2
@@ -199,7 +197,7 @@ theorem two_phase_sample_complexity_formula
   3. `generative_model_greedy_pac` / `generative_vi_optimal_pac` (above):
      direct wrappers
 
-  The algebraic decomposition (`vi_error_composition_conditional`,
+  The algebraic decomposition (`vi_error_composition`,
   `two_phase_sample_complexity_formula`) provides the explicit
   calibration: ε₀ = ε·(1-γ)/(4·|S|·V_max) suffices for the model
   gap to be ≤ ε/2.

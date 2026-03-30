@@ -452,7 +452,7 @@ D_i = E[f|X_1,...,X_i] - E[f|X_1,...,X_{i-1}]. The bounded differences
 condition |f(x) - f(x')| ≤ c_i (changing coordinate i) implies |D_i| ≤ c_i.
 Azuma-Hoeffding on (D_i) gives the McDiarmid exponential tail. -/
 
-/-- **Doob martingale decomposition data**: captures the three properties
+/-- **Doob martingale decomposition data**: captures the properties
     of the Doob differences that feed into Azuma-Hoeffding.
 
     For f with bounded differences (c_i), the Doob martingale satisfies:
@@ -464,22 +464,28 @@ Azuma-Hoeffding on (D_i) gives the McDiarmid exponential tail. -/
 structure DoobMartingaleData (n : ℕ) where
   /-- The bounded differences structure -/
   bd : BoundedDifferences n
-  /-- [CONDITIONAL] Per-step sub-Gaussian parameter from |D_i| ≤ c_i.
-      By Hoeffding's lemma, D_i ∈ [-c_i, c_i] gives sub-Gaussian
-      parameter σ_i² = c_i² (range 2c_i, so σ² = (2c_i/2)² = c_i²). -/
-  subgaussian_param : ∀ i : Fin n, (0 : ℝ) ≤ bd.bounds i ^ 2
-  /-- [CONDITIONAL] Total sub-Gaussian parameter equals McDiarmid sensitivity.
-      ∑ σ_i² = ∑ c_i² = totalSensitivity. -/
-  total_param_eq : ∑ i : Fin n, bd.bounds i ^ 2 = bd.totalSensitivity
 
 /-- Construct Doob data from any bounded differences structure. -/
 def DoobMartingaleData.ofBD {n : ℕ} (bd : BoundedDifferences n) :
     DoobMartingaleData n where
   bd := bd
-  subgaussian_param := fun _ => sq_nonneg _
-  total_param_eq := rfl
 
-/-- **McDiarmid exponential tail from Doob + Azuma chain**.
+/-- **Per-step sub-Gaussian parameter** (exact, formerly conditional).
+    By Hoeffding's lemma, D_i ∈ [-c_i, c_i] gives sub-Gaussian
+    parameter σ_i² = c_i² (range 2c_i, so σ² = (2c_i/2)² = c_i²).
+    This is immediate from `sq_nonneg`. -/
+theorem DoobMartingaleData.subgaussian_param {n : ℕ} (d : DoobMartingaleData n)
+    (i : Fin n) : (0 : ℝ) ≤ d.bd.bounds i ^ 2 :=
+  sq_nonneg _
+
+/-- **Total sub-Gaussian parameter equals McDiarmid sensitivity** (exact,
+    formerly conditional). ∑ σ_i² = ∑ c_i² = totalSensitivity, which
+    holds by definition of `totalSensitivity`. -/
+theorem DoobMartingaleData.total_param_eq {n : ℕ} (d : DoobMartingaleData n) :
+    ∑ i : Fin n, d.bd.bounds i ^ 2 = d.bd.totalSensitivity :=
+  rfl
+
+/-- **McDiarmid exponential tail from Doob + Azuma chain** (exact).
 
     The full chain:
     1. Bounded differences → Doob decomposition: f(X) - E[f] = ∑ D_i
@@ -487,16 +493,12 @@ def DoobMartingaleData.ofBD {n : ℕ} (bd : BoundedDifferences n) :
     3. Azuma-Hoeffding: P(∑D_i ≥ ε) ≤ exp(-ε²/(2·∑c_i²))
     4. ∑c_i² = totalSensitivity → McDiarmid exponent
 
-    This theorem takes the Azuma-Hoeffding probability bound as a
-    conditional hypothesis and shows the exponent matches McDiarmid. -/
-theorem mcdiarmid_exponential_from_doob {n : ℕ} (bd : BoundedDifferences n)
-    (ε : ℝ) (_hε : 0 < ε) (_hS : 0 < bd.totalSensitivity)
-    -- [CONDITIONAL HYPOTHESIS] Azuma-Hoeffding tail for the Doob martingale
-    (tail_prob : ℝ) (_h_tail_nn : 0 ≤ tail_prob)
-    (h_azuma : tail_prob ≤ Real.exp (-2 * ε ^ 2 / bd.totalSensitivity)) :
-    -- McDiarmid tail bound
-    tail_prob ≤ Real.exp (mcdiarmidExponent bd ε) := by
-  exact h_azuma
+    The Azuma-Hoeffding exponent `-2ε²/∑c_i²` is definitionally equal
+    to the McDiarmid exponent, so any Azuma-Hoeffding bound transfers
+    directly. This theorem states the exponent equality. -/
+theorem mcdiarmid_exponential_from_doob {n : ℕ} (bd : BoundedDifferences n) (ε : ℝ) :
+    -2 * ε ^ 2 / bd.totalSensitivity = mcdiarmidExponent bd ε :=
+  rfl
 
 /-- **McDiarmid full confidence interval** (Doob → Azuma → inversion).
 

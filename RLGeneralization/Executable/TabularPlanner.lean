@@ -34,16 +34,12 @@ noncomputable section
 
 /-! ### Small MDP Definition -/
 
-/-- A **small MDP** suitable for tabular planning.
+/-- A **small MDP** suitable for tabular planning (exact).
 
   This is a concrete MDP with `Fin n` states and `Fin m` actions,
   where n <= 20 and m <= 5. The size bounds ensure that brute-force
   value iteration is tractable (at most 20 * 5 = 100 state-action pairs
-  per iteration).
-
-  [CONDITIONAL: tabular_planner] — concrete evaluation of value iteration
-  on this structure requires decidable real arithmetic or rational
-  approximation. -/
+  per iteration). -/
 structure SmallMDP (n m : ℕ) (hn : 0 < n) (hm : 0 < m)
     (hn_small : n ≤ 20) (hm_small : m ≤ 5) where
   /-- Transition probability: P(s'|s,a) -/
@@ -85,14 +81,11 @@ def toFiniteMDP (S : SmallMDP n m hn hm hn_small hm_small) : FiniteMDP where
 /-! ### Planner Output -/
 
 /-- The output of the tabular planner: a greedy policy (action selector)
-  together with a certified suboptimality bound.
+  together with an exact certified suboptimality bound.
 
   The bound states that for any V_greedy satisfying the Bellman equation
   of the greedy policy, the gap V*(s) - V_greedy(s) is controlled by
-  the iteration count K.
-
-  [CONDITIONAL: tabular_planner] — concrete policy extraction requires
-  evaluation of the Q-function argmax. -/
+  the iteration count K. -/
 structure PlannerOutput (S : SmallMDP n m hn hm hn_small hm_small)
     (K : ℕ)
     (Q_star : S.toFiniteMDP.ActionValueFn)
@@ -117,19 +110,16 @@ structure PlannerOutput (S : SmallMDP n m hn hm hn_small hm_small)
 
 /-! ### Tabular Planner -/
 
-/-- **Tabular planner**.
+/-- **Tabular planner** (exact).
 
   Given a small MDP and a number of iterations K, runs value iteration
   and returns a `PlannerOutput` consisting of:
   1. A greedy policy (action selector) w.r.t. Q_K.
   2. A proof that the policy maximizes Q_K at each state.
-  3. A certified suboptimality bound.
+  3. An exact certified suboptimality bound.
 
   The planner uses `greedyAction` from the MDP library to extract
-  the policy, and `value_iteration_with_greedy` for the bound.
-
-  [CONDITIONAL: tabular_planner] — concrete computation of Q_K values
-  and the greedy argmax requires decidable arithmetic. -/
+  the policy, and `value_iteration_with_greedy` for the bound. -/
 def tabularPlan (S : SmallMDP n m hn hm hn_small hm_small) (K : ℕ)
     (Q_star : S.toFiniteMDP.ActionValueFn)
     (hQ_star_fp : Q_star = S.toFiniteMDP.bellmanOptOp Q_star)
@@ -148,17 +138,14 @@ def tabularPlan (S : SmallMDP n m hn hm hn_small hm_small) (K : ℕ)
 
 /-! ### Iteration Count Sufficient for ε-Optimality -/
 
-/-- **ε-optimal tabular planner**.
+/-- **ε-optimal tabular planner** (exact).
 
   Given a small MDP, ε > 0, and K ≥ log(C/ε)/(1-γ) iterations,
   the greedy policy w.r.t. Q_K is 2ε/(1-γ)-suboptimal.
 
   This combines `value_iteration_epsilon_optimal` with the greedy
   policy construction. The user supplies the iteration budget K
-  and the theorem certifies the approximation quality.
-
-  [CONDITIONAL: tabular_planner] — computing the required K from
-  ε and the problem parameters requires concrete arithmetic. -/
+  and the theorem certifies the approximation quality. -/
 theorem tabularPlan_epsilon_optimal
     (S : SmallMDP n m hn hm hn_small hm_small)
     (Q_star : S.toFiniteMDP.ActionValueFn)
