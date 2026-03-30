@@ -89,7 +89,8 @@ The library uses two proof tiers:
   both sides is done, the wiring through Lean's measure theory API is deferred.
 
 Every module compiles with `--wfail` (warnings as failures) and passes
-`lean4checker`.
+`lean4checker`. See [`MODULES.md`](MODULES.md) for the full per-module index
+and [`PROJECT_STANDARD.md`](PROJECT_STANDARD.md) for the formalization criteria.
 
 ## Setup
 

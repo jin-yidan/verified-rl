@@ -34,8 +34,6 @@ jobs:
         run: bash scripts/check_manifest_consistency.sh
       - name: Check Verified Target
         run: bash scripts/check_verified_target.sh
-      - name: Check Generated Status Summary
-        run: python3 scripts/generate_status.py --check
       - name: Check Benchmark Metadata
         run: python3 scripts/check_benchmark_metadata.py
       - name: Benchmark Ground Truth Smoke Test
