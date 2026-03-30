@@ -493,22 +493,29 @@ theorem npg_sample_complexity
   - (1-γ)⁴: discount factor dependence (C contributes (1-γ)⁻¹, D contributes (1-γ)⁻³)
   - T: number of NPG iterations (standard online learning rate)
 
-  [CONDITIONAL] Takes the NPG mirror-descent bound and optimal step
-  size as hypotheses; proves the clean convergence rate by composition. -/
+  Takes the NPG mirror-descent bound and optimal step size as
+  hypotheses; proves η·D = √(C·D/T) from h_opt via sqrt algebra,
+  then composes to get the clean convergence rate. -/
 theorem npg_full_rate_clean
     (log_A γ gap : ℝ) (T : ℕ)
     (hlog : 0 ≤ log_A) (hγ1 : γ < 1) (hT : 0 < (T : ℝ))
     (η : ℝ) (hη : 0 < η)
     (h_opt : η ^ 2 = (log_A / (1 - γ)) / (1 / (1 - γ) ^ 3 * ↑T))
-    (h_gap : gap ≤ (log_A / (1 - γ)) / (η * ↑T) + η * (1 / (1 - γ) ^ 3))
-    -- [CONDITIONAL HYPOTHESIS] η · D equals the closed-form square root.
-    -- This requires showing η = √(C/(D·T)), hence η·D = √(C·D/T),
-    -- which in turn requires Real.sqrt algebra on the quotient.
-    (h_eta_sqrt : η * (1 / (1 - γ) ^ 3) =
-        Real.sqrt (log_A / ((1 - γ) ^ 4 * ↑T))) :
+    (h_gap : gap ≤ (log_A / (1 - γ)) / (η * ↑T) + η * (1 / (1 - γ) ^ 3)) :
     gap ≤ 2 * Real.sqrt (log_A / ((1 - γ) ^ 4 * ↑T)) := by
   have h1mγ : 0 < 1 - γ := by linarith
   have hD : (0 : ℝ) < 1 / (1 - γ) ^ 3 := div_pos one_pos (pow_pos h1mγ 3)
+  -- Prove η · D = √(log_A / ((1-γ)⁴ · T)) from h_opt
+  have h_eta_sqrt : η * (1 / (1 - γ) ^ 3) =
+      Real.sqrt (log_A / ((1 - γ) ^ 4 * ↑T)) := by
+    have hηD_pos : 0 < η * (1 / (1 - γ) ^ 3) := mul_pos hη hD
+    rw [← Real.sqrt_sq hηD_pos.le]
+    congr 1
+    -- (η · D)² = η² · D² = (C/(D·T)) · D² = C·D/T
+    have hD_ne : (1 - γ) ^ 3 ≠ 0 := ne_of_gt (pow_pos h1mγ 3)
+    have hT_ne : (T : ℝ) ≠ 0 := ne_of_gt hT
+    field_simp at h_opt ⊢
+    nlinarith [h_opt, sq_nonneg η, sq_nonneg (1 - γ)]
   have h_step := npg_discounted_convergence log_A γ gap T hlog hγ1 hT η hη h_opt h_gap
   linarith [h_eta_sqrt]
 

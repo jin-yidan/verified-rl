@@ -218,9 +218,9 @@ theorem weightedSqIWLoss_nonneg (cfg : BanditEXP3Config K T) (t : Fin T) :
 theorem exp3_bandit_regret_bound
     (cfg : BanditEXP3Config K T)
     (a_star : Fin K)
-    -- [CONDITIONAL HYPOTHESIS] Potential-function telescoping for IW losses.
-    -- This follows from the same exp(-x) ≤ 1-x+x² argument as in Hedge,
-    -- applied to the importance-weighted losses l̃_t instead of l_t.
+    -- Hypothesis: Potential-function telescoping for IW losses.
+    -- Requires the exp(-x) ≤ 1-x+x² inequality applied to importance-weighted
+    -- losses, combined with log-sum-exp telescoping (same structure as Hedge).
     (h_potential :
       cfg.bandit.regretAgainst cfg.weights a_star ≤
       Real.log K / cfg.η +
@@ -248,11 +248,8 @@ theorem exp3_bandit_regret_bound
 theorem weightedSqIWLoss_le_K
     (cfg : BanditEXP3Config K T)
     (t : Fin T)
-    -- [CONDITIONAL HYPOTHESIS] Expectation bound on per-round IW squared losses.
-    -- Follows from: E_{a_t}[l̃_t(a)²] ≤ 1/p_t(a), hence
-    -- Σ_a p_t(a) · E[l̃_t(a)²] ≤ Σ_a 1 = K.
-    -- We take this as hypothesis because the IW loss depends on the random
-    -- choice a_t, and the bound requires measure-theoretic integration.
+    -- Hypothesis: E_{a_t}[l̃_t(a)²] ≤ 1/p_t(a) implies Σ_a p_t(a)·E[l̃_t(a)²] ≤ K.
+    -- Requires measure-theoretic integration over the random arm choice a_t ∼ p_t.
     (h_iw_sq_bound : cfg.weightedSqIWLoss t ≤ K) :
     cfg.weightedSqIWLoss t ≤ (K : ℝ) :=
   h_iw_sq_bound
@@ -269,12 +266,12 @@ theorem exp3_expected_regret
     {K : ℕ} [NeZero K] {T : ℕ}
     (cfg : BanditEXP3Config K T)
     (a_star : Fin K)
-    -- [CONDITIONAL HYPOTHESIS] Potential-function bound on regret vs IW squared losses
+    -- Hypothesis: potential-function bound (see exp3_bandit_regret_bound)
     (h_potential :
       cfg.bandit.regretAgainst cfg.weights a_star ≤
       Real.log K / cfg.η +
       cfg.η * ∑ t : Fin T, cfg.weightedSqIWLoss t)
-    -- [CONDITIONAL HYPOTHESIS] Per-round IW squared loss bound (from variance calculation)
+    -- Hypothesis: per-round IW variance bound (see weightedSqIWLoss_le_K)
     (h_iw_sq_per_round : ∀ t, cfg.weightedSqIWLoss t ≤ K) :
     cfg.bandit.regretAgainst cfg.weights a_star ≤
     Real.log K / cfg.η + cfg.η * (K * T) := by
@@ -311,7 +308,7 @@ theorem exp3_optimized
     (hT : 0 < T)
     (cfg : BanditEXP3Config K T)
     (a_star : Fin K)
-    -- [CONDITIONAL HYPOTHESIS] Expected regret ≤ log(K)/η + η·K·T
+    -- Hypothesis: expected regret bound (output of exp3_expected_regret)
     (h_regret : cfg.bandit.regretAgainst cfg.weights a_star ≤
       Real.log K / cfg.η + cfg.η * (K * T))
     (hη_opt : cfg.η = Real.sqrt (Real.log K / (K * T))) :

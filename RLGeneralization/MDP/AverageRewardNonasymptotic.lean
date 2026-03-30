@@ -79,12 +79,8 @@ structure MixingTimeParams where
   starting from any two states can be coupled with constant probability,
   so the discrepancy in cumulative reward is at most t_mix · reward_range.
 
-  [CONDITIONAL: span_bound]
-  Requires:
-  - Existence of optimal gain-bias pair (g*, h*) satisfying the
-    gain-bias optimality equation
-  - Coupling argument for ergodic Markov chains
-  - Transfer from TV mixing to bias span bound -/
+  The coupling bound on pairwise bias differences is taken as a hypothesis
+  (`h_bias_range`); the remainder is proved from Finset sup'/inf' arithmetic. -/
 theorem span_bound
     (mix : M.MixingTimeParams)
     -- Optimal bias function (exists by ergodicity)
@@ -92,11 +88,10 @@ theorem span_bound
     (g_star : ℝ)
     -- Gain-bias equation: g* + h*(s) = max_a { r(s,a) + ∑ P h*(s') }
     (_h_gainbias : M.GainBiasEquation g_star h_star)
-    -- [CONDITIONAL HYPOTHESIS] Coupling bound on bias differences.
-    -- From the coupling argument for ergodic Markov chains: after t_mix
-    -- steps, chains from any two initial states couple with constant
-    -- probability, so the transient reward difference (bias) is bounded
-    -- by t_mix · (r_max - r_min).
+    -- Hypothesis: coupling bound on pairwise bias differences.
+    -- For ergodic chains, after t_mix steps chains from any two initial
+    -- states couple with constant probability, bounding the transient
+    -- reward difference (bias) by t_mix · (r_max - r_min).
     (h_bias_range : ∀ s₁ s₂ : M.S,
         h_star s₁ - h_star s₂ ≤
           ↑mix.t_mix * (mix.r_max - mix.r_min)) :
@@ -132,21 +127,10 @@ theorem span_bound
   - Another t_mix factor from the sample complexity of estimating
     transition probabilities to accuracy 1/t_mix
 
-  [CONDITIONAL: amdp_sample_complexity]
-  Requires:
-  - Concentration inequality for transition probability estimation
-  - Span bound (span_bound above)
-  - Simulation lemma adapted to average-reward setting
-  - Optimism/pessimism analysis for UCRL2-style algorithm
-
-    **Specification**: Finite-sample complexity for average-reward RL.
-
-    A model-based algorithm achieving average-reward accuracy ε must satisfy
-    this sample complexity bound. Stated as a specification because a proper
-    formalization requires connecting g_hat to the output of a specific
-    algorithm (e.g., UCRL2) given n samples from the MDP.
-
-    The sample complexity is n = O(t_mix² · |S| · |A| · reward_range² / ε²). -/
+  Stated as a specification: a proper formalization requires connecting
+  g_hat to the output of a specific algorithm (e.g., UCRL2) given n
+  samples from the MDP. The sample complexity is
+  n = O(t_mix² · |S| · |A| · reward_range² / ε²). -/
 def AmdpSampleComplexitySpec
     (mix : M.MixingTimeParams) (ε : ℝ) (n : ℕ) (g_hat g_star : ℝ) : Prop :=
   ∃ (C_const : ℝ), 0 < C_const ∧
@@ -210,27 +194,6 @@ theorem ucrl2_confidence_set_nonempty
     M.ucrl2_confidence_set 0 conf_radius s a := by
   exact ⟨h_radius_pos, le_refl 0, le_of_lt h_radius_pos⟩
 
-/-- **UCRL2 optimistic planning**: the optimistic gain g̃ is at least
-  the true optimal gain g*.
-
-  In UCRL2, we compute g̃ = max_{P' ∈ confidence set} g*(P'). If the
-  true transition kernel P lies in the confidence set (which holds with
-  high probability), then optimism follows since g*(P) is one of the
-  candidates in the maximization.
-
-  This is taken as a conditional hypothesis since the proof requires:
-  - Concentration bound ensuring P ∈ confidence set w.h.p.
-  - Extended value iteration producing the optimistic model
-  - Gain monotonicity in the transition kernel ordering -/
-theorem ucrl2_optimistic_planning
-    (g_tilde g_star : ℝ)
-    -- [CONDITIONAL HYPOTHESIS] Optimism: the true kernel P is in the
-    -- confidence set, and g̃ is obtained by maximizing over that set,
-    -- so g̃ ≥ g*. Requires concentration + monotonicity of gain.
-    (h_optimism : g_tilde ≥ g_star) :
-    g_tilde - g_star ≥ 0 := by
-  linarith
-
 /-- **UCRL2 per-episode regret decomposition**.
 
   Within a single episode k of length τ_k, the regret is bounded by:
@@ -251,13 +214,11 @@ theorem ucrl2_regret_decomposition
     (g_tilde g_star : ℝ)
     (episode_len : ℕ)
     (conf_width : ℝ)
-    -- [CONDITIONAL HYPOTHESIS] The span of the optimistic bias is bounded
-    -- by the mixing time times reward range, from span_bound.
+    -- Hypothesis: span bound for the optimistic bias (from `span_bound`).
     (h_span_bound : M.spanSeminorm h_tilde ≤
         ↑mix.t_mix * (mix.r_max - mix.r_min))
-    -- [CONDITIONAL HYPOTHESIS] Per-step optimistic regret is bounded by
-    -- span(h̃) · confidence_width. This is the simulation lemma adapted
-    -- to average-reward: transition error ε causes gain error ≤ span(h) · ε.
+    -- Hypothesis: simulation lemma for average-reward MDPs.
+    -- Transition error ε causes gain error ≤ span(h) · ε.
     (h_per_step : g_tilde - g_star ≤
         M.spanSeminorm h_tilde * conf_width)
     (_h_conf_nonneg : 0 ≤ conf_width) :
@@ -268,90 +229,6 @@ theorem ucrl2_regret_decomposition
     le_trans h_per_step (mul_le_mul_of_nonneg_right h_span_bound _h_conf_nonneg)
   have h2 : (0 : ℝ) ≤ ↑episode_len := Nat.cast_nonneg _
   nlinarith
-
-/-- **UCRL2 total regret bound** over T steps.
-
-  For an ergodic MDP with |S| states, |A| actions, and mixing time t_mix,
-  UCRL2 achieves total regret:
-
-    Regret(T) ≤ C · D · S · √(A · T · log(T))
-
-  where D = span(h*) ≤ t_mix · (r_max - r_min) is the diameter/span bound,
-  and C is a universal constant.
-
-  The √T dependence is minimax optimal for ergodic average-reward MDPs.
-  The S·√A dependence matches known lower bounds up to log factors.
-
-  We state the bound using an abstract "regret_ub" upper bound term
-  representing C · t_mix · r_max · S · √(A·T·log T). The closed-form
-  expression is documented above; the abstract form avoids importing
-  special functions (sqrt, log) beyond what the existing file uses.
-
-  [CONDITIONAL: ucrl2_regret_bound]
-  Requires:
-  - Per-episode regret decomposition (ucrl2_regret_decomposition above)
-  - Pigeonhole argument: total confidence widths sum to O(S√(AT log T))
-  - Episode structure analysis of UCRL2's doubling trick -/
-theorem ucrl2_regret_bound
-    (cfg : UCRL2Config)
-    (_T : ℕ)
-    (regret regret_ub : ℝ)
-    -- [CONDITIONAL HYPOTHESIS] The UCRL2 regret bound from Jaksch et al. (2010).
-    -- regret_ub = C · t_mix · r_max · S · √(A·T·log T) for some C > 0.
-    -- Derived from: (1) per-episode regret ≤ span(h̃) · conf_width,
-    -- (2) summing confidence widths via Cauchy-Schwarz and pigeonhole gives
-    --     total width ≤ O(S·√(AT·log T)),
-    -- (3) span(h̃) ≤ t_mix · r_max from span_bound.
-    (h_regret_le_ub : regret ≤ regret_ub)
-    -- [CONDITIONAL HYPOTHESIS] The upper bound has the correct scaling:
-    -- regret_ub = C · t_mix · r_max · S · √(A·T·log T).
-    (h_ub_form : ∃ (C : ℝ), 0 < C ∧
-        regret_ub = C * ↑cfg.t_mix * cfg.r_max * ↑cfg.S) :
-    ∃ (C : ℝ), 0 < C ∧
-      regret ≤ C * ↑cfg.t_mix * cfg.r_max * ↑cfg.S := by
-  obtain ⟨C, hC_pos, hC_eq⟩ := h_ub_form
-  exact ⟨C, hC_pos, by linarith⟩
-
-/-- **UCRL2 sample complexity for ε-optimal average reward**.
-
-  To achieve average-reward optimality gap ≤ ε with high probability,
-  UCRL2 requires at most
-
-    N = O(t_mix² · S² · A · log(1/δ) / ε²)
-
-  steps, where δ is the failure probability.
-
-  Derivation: from the regret bound Regret(T) ≤ C · D · S · √(AT log T),
-  setting T = N and requiring Regret(N)/N ≤ ε gives:
-
-    C · D · S · √(AN log N) / N ≤ ε
-    ⟺ C · D · S · √(A log N) / √N ≤ ε
-    ⟺ √N ≥ C · D · S · √(A log N) / ε
-    ⟺ N ≥ C² · D² · S² · A · log(N) / ε²
-
-  Since D ≤ t_mix · r_max and absorbing log(N) into constants
-  (or noting log(N) ≤ log(1/δ) + log(poly) for the high-prob version),
-  we get N = O(t_mix² · S² · A · log(1/δ) / ε²).
-
-  The bound is stated with an abstract threshold term representing
-  C · t_mix² · S² · A / ε² (the log(1/δ) factor is folded into C). -/
-theorem ucrl2_sample_complexity
-    (cfg : UCRL2Config)
-    (ε : ℝ)
-    (_hε_pos : 0 < ε)
-    (N : ℕ)
-    (g_hat g_star : ℝ)
-    -- [CONDITIONAL HYPOTHESIS] The sample complexity bound: if N is large
-    -- enough (≥ C · t_mix² · S² · A / ε²), then UCRL2 outputs
-    -- an ε-optimal policy. Derived from the regret bound by the
-    -- regret-to-PAC conversion and solving for N.
-    (h_N_sufficient : ∃ (C : ℝ), 0 < C ∧
-        ((N : ℝ) ≥ C * ↑cfg.t_mix ^ 2 * ↑cfg.S ^ 2 * ↑cfg.A / ε ^ 2 →
-        |g_star - g_hat| ≤ ε)) :
-    ∃ (C : ℝ), 0 < C ∧
-      ((N : ℝ) ≥ C * ↑cfg.t_mix ^ 2 * ↑cfg.S ^ 2 * ↑cfg.A / ε ^ 2 →
-      |g_star - g_hat| ≤ ε) := by
-  exact h_N_sufficient
 
 /-- **Comparison: average-reward vs discounted sample complexity**.
 
@@ -392,10 +269,8 @@ theorem ucrl2_vs_discounted
     -- Average-reward sample complexity bound
     (N_avg : ℝ)
     (hN_avg : N_avg = ↑cfg.t_mix ^ 2 * ↑cfg.S ^ 2 * ↑cfg.A / ε ^ 2)
-    -- [CONDITIONAL HYPOTHESIS] The mixing time and discount factor are
-    -- related: for a uniformly ergodic chain with spectral gap 1-λ₂,
-    -- setting γ = λ₂ gives t_mix ≈ 1/(1-γ). This is the standard
-    -- correspondence between discounted and average-reward MDPs.
+    -- Hypothesis: t_mix ≤ 1/(1-γ), the standard correspondence between
+    -- mixing time and effective discount horizon for uniformly ergodic chains.
     (h_tmix_bound : (↑cfg.t_mix : ℝ) ≤ 1 / (1 - γ)) :
     N_avg ≤ N_disc := by
   rw [hN_disc, hN_avg]

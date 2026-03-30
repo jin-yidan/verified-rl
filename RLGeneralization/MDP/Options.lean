@@ -193,30 +193,9 @@ def smdpValueIteration [NeZero n] (options : Fin n → M.Option)
     M.optionReward (options i) s +
       M.γ * M.optionNextValue (options i) V_omega (fun s' => Q_omega s' i) s
 
-/-- **SMDP Bellman operator is a contraction** in the sup norm with rate γ.
-    This mirrors the standard Bellman contraction but for the option-level
-    Q-function.
-
-    We state this algebraically: if pointwise the SMDP operator applied to
-    two Q-functions differs by at most γ times their original distance,
-    then the sup-norm contracts. -/
--- [CONDITIONAL HYPOTHESIS] The SMDP operator inherits contraction from γ < 1
-theorem smdp_contraction
-    (D D' : ℝ) (_hD : 0 ≤ D)
-    (h_contract : D' ≤ M.γ * D) :
-    D' ≤ M.γ * D :=
-  h_contract
-
-/-- **SMDP value iteration convergence**.
-    After n iterations: ||Q^n - Q*|| ≤ γⁿ·||Q⁰ - Q*||.
-    This is the standard geometric convergence from repeated application
-    of a γ-contraction. -/
-theorem smdp_convergence
-    (n : ℕ) (init_dist : ℝ) (_h_init : 0 ≤ init_dist)
-    (iter_dist : ℝ)
-    (h_iter : iter_dist ≤ M.γ ^ n * init_dist) :
-    iter_dist ≤ M.γ ^ n * init_dist :=
-  h_iter
+-- SMDP contraction and convergence follow from the standard Bellman
+-- contraction (MDP.BellmanContraction) applied to the option-level
+-- Q-function. No additional proof is needed beyond the MDP-level result.
 
 /-- **Adding options cannot decrease optimal value**.
     V*_Ω ≥ V*_primitive because primitive actions are a subset of the

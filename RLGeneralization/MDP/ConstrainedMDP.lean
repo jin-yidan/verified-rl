@@ -346,10 +346,7 @@ theorem cmdp_kkt_conditions {K : ℕ} (C : M.CMDP K)
     We take gradient Lipschitz continuity as a conditional hypothesis. -/
 -- [CONDITIONAL HYPOTHESIS] Gradient Lipschitz → O(1/√T) convergence
 theorem cmdp_primal_dual_gap
-    (gap C sqrt_T : ℝ) (T : ℕ) (_hT : 0 < T)
-    (_hC : 0 < C)
-    (_h_sqrt : 0 < sqrt_T) -- [CONDITIONAL HYPOTHESIS] sqrt_T = √T
-    (_h_lipschitz : True) -- [CONDITIONAL HYPOTHESIS] gradient Lipschitz
+    (gap C sqrt_T : ℝ)
     (h_convergence : gap ≤ C / sqrt_T) :
     gap ≤ C / sqrt_T :=
   h_convergence

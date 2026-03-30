@@ -14,11 +14,11 @@ These are the concentration results underlying LinUCB and LSVI-UCB.
 * `selfNormalizedNorm_nonneg` — ‖v‖²_{Λ^{-1}} ≥ 0 for PD Λ (proved)
 * `confidenceRadiusSq_pos` — β² > 0 when σ, δ > 0 and δ < 1 (proved)
 * `confidenceRadiusSq_le_of_smaller_ldr` — β² monotone in log-det ratio (proved)
-* `self_normalized_bound_conditional` — concentration hypothesis (conditional)
-* `confidence_ellipsoid_conditional` — estimation hypothesis (conditional)
-* `linucb_prediction_error` — combines CS hypothesis + confidence bound (proved)
+* `self_normalized_bound_conditional` — concentration bound (conditional on martingale MGF)
+* `confidence_ellipsoid_conditional` — estimation bound (conditional on OLS reduction)
+* `linucb_prediction_error` — Cauchy-Schwarz + confidence bound (proved, CS no longer conditional)
 
-* `self_normalized_cauchy_schwarz` — |φ^T v|² ≤ ‖φ‖²_{Λ^{-1}}·‖v‖²_Λ (discriminant argument)
+* `self_normalized_cauchy_schwarz` — |φ^T v|² ≤ ‖φ‖²_{Λ⁻¹}·‖v‖²_Λ
 
 ## References
 
@@ -27,7 +27,6 @@ These are the concentration results underlying LinUCB and LSVI-UCB.
 * Agarwal et al., "RL: Theory and Algorithms," Appendix A.5 (2026).
 -/
 
-import RLGeneralization.Concentration.SubGaussian
 import RLGeneralization.Concentration.MatrixBernstein
 import Mathlib.LinearAlgebra.Matrix.PosDef
 
@@ -210,8 +209,16 @@ theorem confidenceRadiusSq_le_of_smaller_ldr (σ δ ldr₁ ldr₂ : ℝ)
 
 /-- **Vector self-normalized bound** (conditional).
 
-[CONDITIONAL] Returns hypothesis directly. The actual martingale argument
-would use `measure_sum_ge_le_of_hasCondSubgaussianMGF`.
+-- Hypothesis: The two preconditions (`h_mgf_bound`, `h_ldr_decomp`) encode the
+-- outcome of the vector self-normalized martingale argument
+-- (Abbasi-Yadkori et al. 2011, Theorem 1). A full proof requires:
+--   1. Constructing the supermartingale M_t = exp(λ^T S_t - ½ λ^T Λ_t λ)
+--      and applying Ville's maximal inequality (measure-theoretic).
+--   2. Optimizing over λ via the matrix determinant lemma to obtain the
+--      log-det ratio. This step needs `Real.log_det` and the matrix
+--      determinant lemma, which are not yet in Mathlib.
+-- These hypotheses are the minimal interface: any proof of the martingale
+-- bound that provides `h_mgf_bound` and `h_ldr_decomp` completes the theorem.
 
 With probability ≥ 1-δ, for the weighted sum S_T = ∑_t φ_t ε_t:
   ‖S_T‖²_{Λ_T^{-1}} ≤ β²(T, δ)
@@ -238,8 +245,15 @@ theorem self_normalized_bound_conditional
 
 /-- **Confidence ellipsoid contains θ*** (conditional).
 
-[CONDITIONAL] Returns hypothesis directly. The actual proof would use
-the self-normalized martingale bound.
+-- Hypothesis: The two preconditions encode the standard OLS reduction:
+--   1. `h_error_eq`: The estimation error θ̂ - θ* equals a weighted noise
+--      vector Λ_T⁻¹ Σ_t φ_t ε_t. This is an algebraic identity from the
+--      normal equations (Λ_T θ̂ = Σ_t φ_t y_t) that holds for any linear
+--      regression estimator. A full proof needs Mathlib's `Matrix.mulVec`
+--      injectivity from `PosDef.isUnit` — straightforward but tedious.
+--   2. `h_noise_bound`: The self-normalized bound on the noise sum, which
+--      follows from `self_normalized_bound_conditional` above once the
+--      martingale hypotheses are discharged.
 
 The ellipsoidal confidence set C_T = {θ | ‖θ̂-θ‖²_Λ ≤ β²} contains the
 true parameter θ* with probability ≥ 1-δ.
@@ -267,31 +281,31 @@ theorem confidence_ellipsoid_conditional
 
 /-! ### LinUCB Application -/
 
-/-- **LinUCB prediction error bound** (conditional on CS + confidence ellipsoid).
+/-- **LinUCB prediction error bound**.
 
 For arm feature vector φ, the prediction error satisfies:
   |φ^T (θ̂ - θ*)| ≤ ‖φ‖_{Λ^{-1}} · β(T, δ)
 
-Proof: |φ^T (θ̂-θ*)| ≤ ‖φ‖_{Λ^{-1}} · ‖θ̂-θ*‖_Λ  (Cauchy-Schwarz, conditional)
+Proof: |φ^T (θ̂-θ*)| ≤ ‖φ‖_{Λ^{-1}} · ‖θ̂-θ*‖_Λ  (Cauchy-Schwarz, proved)
        ‖θ̂-θ*‖_Λ ≤ β(T,δ)                           (confidence ellipsoid) -/
 theorem linucb_prediction_error
     (T : ℕ) (lam : ℝ) (hlam : 0 < lam)
     (phi_arm : Fin d → ℝ) (theta_star theta_hat : Fin d → ℝ)
-    (sigma delta ldr : ℝ) (_hσ : 0 < sigma) (_hδ : 0 < delta) (_hδ1 : delta < 1) (_h_ldr : 0 ≤ ldr)
-    (phi_hist : Fin T → Fin d → ℝ) [DecidableEq (Fin d)] [NeZero d]
+    (sigma delta ldr : ℝ) (_hσ : 0 < sigma)
+    (_hδ : 0 < delta) (_hδ1 : delta < 1) (_h_ldr : 0 ≤ ldr)
+    (phi_hist : Fin T → Fin d → ℝ) [NeZero d]
     (beta_sq := confidenceRadiusSq sigma delta ldr)
     (h_conc : selfNormalizedNorm (fun i => theta_hat i - theta_star i)
-        (regularizedGram T lam phi_hist) ≤ beta_sq)
-    -- Cauchy-Schwarz in Λ-inner product (conditional)
-    (h_cs : (dotProduct phi_arm (fun i => theta_hat i - theta_star i)) ^ 2 ≤
-            selfNormalizedNorm phi_arm (regularizedGram T lam phi_hist)⁻¹ *
-            selfNormalizedNorm (fun i => theta_hat i - theta_star i)
-              (regularizedGram T lam phi_hist)) :
+        (regularizedGram T lam phi_hist) ≤ beta_sq) :
     (dotProduct phi_arm (fun i => theta_hat i - theta_star i)) ^ 2 ≤
       selfNormalizedNorm phi_arm (regularizedGram T lam phi_hist)⁻¹ * beta_sq := by
+  have hΛ_pd := regularizedGram_posDef T lam hlam phi_hist
+  -- Cauchy-Schwarz: |φ^T v|² ≤ ‖φ‖²_{Λ⁻¹} · ‖v‖²_Λ (proved inline)
+  have h_cs := self_normalized_cauchy_schwarz phi_arm
+    (fun i => theta_hat i - theta_star i) (regularizedGram T lam phi_hist) hΛ_pd
   have h_phi_nonneg : 0 ≤ selfNormalizedNorm phi_arm (regularizedGram T lam phi_hist)⁻¹ := by
     apply selfNormalizedNorm_nonneg
-    exact (regularizedGram_posDef T lam hlam phi_hist).inv
+    exact hΛ_pd.inv
   exact le_trans h_cs (mul_le_mul_of_nonneg_left h_conc h_phi_nonneg)
 
 end

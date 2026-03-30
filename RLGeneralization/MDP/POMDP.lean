@@ -444,24 +444,6 @@ def beliefBellmanOp
     M.beliefReward b a + M.γ * ∑ o : M.O,
       M.observationLikelihood b a o * beliefValueAtUpdate b a o
 
-/-- The belief Bellman operator preserves PWLC structure:
-    if V is PWLC then TV is also PWLC.
-
-    This is the Sondik (1971) / Smallwood-Sondik (1973) theorem.
-    The proof requires enumerating all action-observation-alpha triples
-    and constructing new alpha vectors for each policy tree extension. -/
-theorem beliefBellman_preserves_pwlc
-    (_pw : M.PiecewiseLinearConvex)
-    (beliefValueAtUpdate : M.BeliefState → M.A → M.O → ℝ)
-    -- [CONDITIONAL HYPOTHESIS] The belief value at update uses the PWLC representation
-    (_hV_eq : ∀ b a o, beliefValueAtUpdate b a o = _pw.value b)
-    -- [CONDITIONAL HYPOTHESIS] Each action-observation pair yields a PWLC backup
-    (hbackup : ∃ pw' : M.PiecewiseLinearConvex,
-      ∀ b, pw'.value b = M.beliefBellmanOp _pw.value beliefValueAtUpdate b) :
-    ∃ pw' : M.PiecewiseLinearConvex,
-      ∀ b, pw'.value b = M.beliefBellmanOp _pw.value beliefValueAtUpdate b :=
-  hbackup
-
 /-! ### Belief-Space Contraction and Convergence -/
 
 /-- Sup-norm distance between two belief value functions over a finite
@@ -480,10 +462,8 @@ theorem beliefBellman_contraction
     (V₁ V₂ : M.BeliefState → ℝ)
     (bvu₁ bvu₂ : M.BeliefState → M.A → M.O → ℝ)
     (D : ℝ)
-    -- [CONDITIONAL HYPOTHESIS] The belief value at updates satisfies the contraction bound
-    (hbvu_bound : ∀ b a o, |bvu₁ b a o - bvu₂ b a o| ≤ D)
-    -- [CONDITIONAL HYPOTHESIS] The reward components are the same for both
-    (_hreward_eq : ∀ b a, M.beliefReward b a = M.beliefReward b a) :
+    -- Hypothesis: belief value at updates satisfies the contraction bound
+    (hbvu_bound : ∀ b a o, |bvu₁ b a o - bvu₂ b a o| ≤ D) :
     ∀ b, |M.beliefBellmanOp V₁ bvu₁ b - M.beliefBellmanOp V₂ bvu₂ b| ≤
       M.γ * D := by
   intro b
@@ -533,17 +513,11 @@ theorem beliefBellman_contraction
     mappings (Banach fixed-point theorem). The belief Bellman operator
     is a γ-contraction, so iterating n times yields γⁿ contraction. -/
 theorem belief_value_convergence
-    (n : ℕ) (γ_pow_bound : ℝ)
-    (D₀ : ℝ)
-    -- [CONDITIONAL HYPOTHESIS] γⁿ ≤ γ_pow_bound (in practice γ_pow_bound = γⁿ)
-    (_hγ_pow : M.γ ^ n ≤ γ_pow_bound)
-    -- [CONDITIONAL HYPOTHESIS] Initial distance ‖V₀ - V*‖_∞ ≤ D₀
-    (_hD₀ : 0 ≤ D₀)
-    -- [CONDITIONAL HYPOTHESIS] After n iterations, distance bounded by γⁿ · D₀
-    -- This follows from n-fold application of beliefBellman_contraction
-    (hiter : ∀ (err : ℝ), err ≤ M.γ ^ n * D₀ → err ≤ γ_pow_bound * D₀) :
+    (n : ℕ) (γ_pow_bound D₀ : ℝ)
+    (hγ_pow : M.γ ^ n ≤ γ_pow_bound)
+    (hD₀ : 0 ≤ D₀) :
     ∀ (err : ℝ), err ≤ M.γ ^ n * D₀ → err ≤ γ_pow_bound * D₀ :=
-  hiter
+  fun _ herr => le_trans herr (mul_le_mul_of_nonneg_right hγ_pow hD₀)
 
 /-- **Geometric convergence rate**: explicit bound showing that
     n-fold application of a γ-contraction achieves γⁿ contraction.
@@ -558,12 +532,10 @@ theorem contraction_iterate_bound
 /-- After sufficiently many iterations, the error is arbitrarily small.
     For any ε > 0, choosing n ≥ log(ε(1-γ)/R_max) / log(γ) suffices. -/
 theorem belief_iteration_eps_convergence
-    (ε : ℝ) (_hε : 0 < ε) (D₀ : ℝ) (_hD₀ : 0 < D₀)
-    (n : ℕ)
-    -- [CONDITIONAL HYPOTHESIS] n is large enough that γⁿ D₀ < ε
-    (hn : M.γ ^ n * D₀ < ε) :
-    M.γ ^ n * D₀ < ε :=
-  hn
+    (ε : ℝ) (D₀ : ℝ) (hD₀ : 0 < D₀)
+    (n : ℕ) (hγ_pow : M.γ ^ n < ε / D₀) :
+    M.γ ^ n * D₀ < ε := by
+  rwa [lt_div_iff₀ hD₀] at hγ_pow
 
 end POMDP
 

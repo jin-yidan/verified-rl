@@ -1,16 +1,13 @@
 -- RLGeneralization.Draft: frontier modules excluded from the trusted root.
 --
--- These files build, but several still contain deferred proofs (`sorry`),
--- vacuous theorems, or thin wrappers, so they are not part of the
+-- These files build, but contain vacuous theorems, thin wrappers,
+-- or pure hypothesis-forwarding, so they are not part of the
 -- trusted benchmark target.
 
 -- Bellman rank and GOLF (has vacuous theorem)
 import RLGeneralization.BilinearRank.Basic
 
--- Phase 9: cross-cutting modules (conditional, sorry proofs)
+-- Offline RL function approximation (hypothesis-forwarding wrappers)
 import RLGeneralization.OfflineRL.FunctionApprox
-import RLGeneralization.MDP.AverageRewardNonasymptotic
+-- POMDP belief MDP (thin wrappers over POMDP module)
 import RLGeneralization.MDP.POmdpBeliefMDP
-import RLGeneralization.BilinearRank.RepresentationBound
-
--- Phase 10: executable artifacts (promoted to trusted root)

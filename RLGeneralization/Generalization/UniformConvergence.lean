@@ -115,10 +115,7 @@ theorem rademacher_to_uniform_convergence
 theorem vc_to_uniform_convergence (ucb : UniformConvergenceBound)
     -- [CONDITIONAL HYPOTHESIS] The sample size is large enough for VC-based convergence.
     -- n ≥ C·d·log(d/ε)/ε² ensures 2R + concentration_term ≤ ε
-    (_h_n_large : (ucb.d : ℝ) * Real.log ((ucb.d : ℝ) / ucb.ε) / ucb.ε ^ 2 ≤ ucb.n)
-    -- [CONDITIONAL HYPOTHESIS] The Rademacher + McDiarmid chain gives
-    -- P(sup |Pn f - Pf| > ε) ≤ δ
-    (_h_convergence : True) :  -- placeholder for the probabilistic conclusion
+    (_h_n_large : (ucb.d : ℝ) * Real.log ((ucb.d : ℝ) / ucb.ε) / ucb.ε ^ 2 ≤ ucb.n) :
     -- The uniform convergence width is bounded by ε
     2 * Real.sqrt (2 * (Real.log (↑ucb.d + 1) + ↑ucb.d * Real.log ↑ucb.n) / ↑ucb.n) +
       Real.sqrt (2 * Real.log (1 / ucb.δ) / ↑ucb.n) ≥ 0 := by

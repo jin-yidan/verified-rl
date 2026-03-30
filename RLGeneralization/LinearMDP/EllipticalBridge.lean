@@ -61,7 +61,7 @@ noncomputable section
     The bridge takes the per-round gap condition as an additional
     hypothesis on the witness x.
 
-    **Conditional**: `h_gap_for_x` requires per-round optimism + CS.
+    **Hypotheses**: `h_gap_for_x` requires per-round optimism + CS + confidence.
     **Zero sorry**: all proof steps are fully mechanized. -/
 theorem elliptical_potential_linucb_bridge
     (d_nat : ℕ) (hd : 0 < d_nat) (T : ℕ)
@@ -69,9 +69,9 @@ theorem elliptical_potential_linucb_bridge
     (h_norm : ∀ k : Fin T, sqNorm (phis k) ≤ 1)
     (β : ℝ) (_hβ : 0 ≤ β)
     (gap : Fin T → ℝ)
-    -- [CONDITIONAL HYPOTHESIS] Per-round gap bound for the elliptical potential witness.
-    -- In practice, x_t = φ_t^T Λ_t^{-1} φ_t and gap_t/2 ≤ β·√(min(1, x_t))
-    -- follows from optimism + Cauchy-Schwarz + confidence ellipsoid.
+    -- Hypothesis: per-round gap bound for the elliptical potential witness.
+    -- Requires optimism + Cauchy-Schwarz in Λ-metric + confidence ellipsoid;
+    -- these depend on martingale concentration and matrix PSD structure.
     (h_gap_for_x : ∀ x : Fin T → ℝ,
         (∀ t, 0 ≤ x t) →
         (∑ t : Fin T, min 1 (x t) ≤ 2 * ↑d_nat * Real.log (1 + ↑T / ↑d_nat)) →
@@ -97,7 +97,7 @@ theorem elliptical_potential_linucb_bridge
     This composes `elliptical_potential_linucb_bridge` with
     `linucb_regret_composition` into a single statement.
 
-    **Conditional**: `h_gap_for_x` requires per-round optimism.
+    **Hypotheses**: `h_gap_for_x` requires per-round optimism.
     **Zero sorry**: all proof steps are fully mechanized. -/
 theorem linucb_regret_from_features
     (d_nat : ℕ) (hd : 0 < d_nat) (T : ℕ)
@@ -105,7 +105,8 @@ theorem linucb_regret_from_features
     (h_norm : ∀ k : Fin T, sqNorm (phis k) ≤ 1)
     (β : ℝ) (hβ : 0 ≤ β)
     (gap : Fin T → ℝ)
-    -- [CONDITIONAL HYPOTHESIS] Per-round gap bound for any valid potential witness.
+    -- Hypothesis: per-round gap bound for any valid potential witness.
+    -- Requires per-round optimism (Cauchy-Schwarz + confidence ellipsoid).
     (h_gap_for_x : ∀ x : Fin T → ℝ,
         (∀ t, 0 ≤ x t) →
         (∑ t : Fin T, min 1 (x t) ≤ 2 * ↑d_nat * Real.log (1 + ↑T / ↑d_nat)) →
@@ -132,15 +133,13 @@ theorem linucb_regret_from_features
     2. Per-round optimism hypothesis gives gap bound in terms of x
     3. Composition yields the final O(d√T) regret
 
-    **Conditional hypotheses**:
-    - `h_cs`: Cauchy-Schwarz in Λ-metric for each round
-    - `h_conf`: confidence ellipsoid bound for each round
-    - `h_gap_from_optimism`: per-round gap bound from optimism
+    **Hypotheses** (stochastic/matrix-algebra, not proved here):
+    - `_h_cs`: Cauchy-Schwarz in Λ-metric (needs Λ_t.PosDef; see `self_normalized_cauchy_schwarz`)
+    - `_h_conf`: confidence ellipsoid (martingale concentration, Abbasi-Yadkori 2011 Thm 1)
+    - `h_gap_from_optimism`: per-round gap bound (derived from the above two in full analysis)
 
-    **Zero sorry**: all proof steps are fully mechanized given the
-    conditional hypotheses. The conditional hypotheses encapsulate
-    the stochastic/matrix-algebra components (martingale concentration,
-    matrix square root). -/
+    **Zero sorry**: all proof steps are fully mechanized given the hypotheses.
+    The hypotheses encapsulate stochastic/matrix-algebra components. -/
 theorem linucb_end_to_end
     (d_nat : ℕ) (hd : 0 < d_nat) (T : ℕ)
     (phis : Fin T → Fin d_nat → ℝ)
@@ -150,19 +149,22 @@ theorem linucb_end_to_end
     (_Λ : Fin T → Matrix (Fin d_nat) (Fin d_nat) ℝ)
     (β : ℝ) (hβ : 0 ≤ β)
     (gap : Fin T → ℝ)
-    -- [CONDITIONAL HYPOTHESIS] Per-round Cauchy-Schwarz in Λ-metric:
-    --   (φ^T(θ̂-θ*))² ≤ selfNormalizedNorm φ Λ · selfNormalizedNorm (θ̂-θ*) Λ⁻¹
+    -- Hypothesis: per-round Cauchy-Schwarz in Λ-metric.
+    -- Provable from `self_normalized_cauchy_schwarz` given Λ_t.PosDef,
+    -- but PosDef is not assumed here; depends on regularized Gram construction.
+    -- Unused in this proof (subsumed by h_gap_from_optimism); retained for
+    -- documentation of the full optimism derivation.
     (_h_cs : ∀ t : Fin T,
         (dotProduct (phis t) (fun i => _theta_hats t i - _theta_star i)) ^ 2 ≤
         selfNormalizedNorm (phis t) (_Λ t) *
           selfNormalizedNorm (fun i => _theta_hats t i - _theta_star i) (_Λ t)⁻¹)
-    -- [CONDITIONAL HYPOTHESIS] Per-round confidence ellipsoid:
-    --   ‖θ̂_t - θ*‖²_Λ ≤ β²
+    -- Hypothesis: per-round confidence ellipsoid ‖θ̂_t - θ*‖²_{Λ^{-1}} ≤ β².
+    -- Follows from self-normalized martingale concentration (Abbasi-Yadkori 2011, Thm 1).
+    -- Unused in this proof; retained for documentation.
     (_h_conf : ∀ t : Fin T,
         selfNormalizedNorm (fun i => _theta_hats t i - _theta_star i) (_Λ t)⁻¹ ≤ β ^ 2)
-    -- [CONDITIONAL HYPOTHESIS] Per-round gap from optimism:
-    -- Given the elliptical potential witness x satisfying the potential bound,
-    -- the gap is bounded: gap t / 2 ≤ β · √(min 1 (x t))
+    -- Hypothesis: per-round gap from optimism.
+    -- Derived from _h_cs + _h_conf in the full analysis; here taken directly.
     (h_gap_from_optimism : ∀ x : Fin T → ℝ,
         (∀ t, 0 ≤ x t) →
         (∑ t : Fin T, min 1 (x t) ≤ 2 * ↑d_nat * Real.log (1 + ↑T / ↑d_nat)) →

@@ -634,7 +634,6 @@ theorem dual_objective_monotone_reward
     (d : M.S → M.A → ℝ)
     (hd_nn : ∀ s a, 0 ≤ d s a)
     (r₂ : M.S → M.A → ℝ)
-    -- [CONDITIONAL HYPOTHESIS] Reward ordering
     (hr : ∀ s a, M.r s a ≤ r₂ s a) :
     M.dualObjective d ≤
       (1 / (1 - M.γ)) * ∑ s, ∑ a, d s a * r₂ s a := by
@@ -684,9 +683,7 @@ structure KKTConditions (μ : M.S → ℝ) (V : M.StateValueFn) (d : M.S → M.A
   dual_feasible : M.StateActionPolytope μ d
   /-- Complementary slackness: d(s,a) * (V(s) - TV(s,a)) = 0 for all s,a -/
   compl_slack : ∀ s a, d s a * (V s - M.bellmanBackup V s a) = 0
-  /-- Stationarity: the gradient condition is encoded by the
-      flow conservation in dual_feasible -/
-  stationarity : True
+  -- Stationarity is encoded by the flow conservation in dual_feasible
 
 /-- **Strong duality implies complementary slackness in product form.**
 
@@ -745,7 +742,6 @@ theorem strong_duality_implies_KKT
     dual_feasible := hpoly
     compl_slack := M.strong_duality_implies_compl_slack_sum μ V d
         (M.bellman_optimal_is_feasible V hopt) hpoly _hstrong
-    stationarity := trivial
   }
 
 /-- **KKT conditions imply weak duality bound.**

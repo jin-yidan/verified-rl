@@ -2,8 +2,8 @@
 
 A machine-checked formalization of reinforcement learning theory, built on
 [Mathlib](https://github.com/leanprover-community/mathlib4). The library
-contains **119 modules** and **46,000+ lines** of Lean 4 code with **zero
-`sorry`** anywhere in the codebase.
+contains **116 trusted modules** (+ 3 draft) and **46,000+ lines** of Lean 4
+code with **zero `sorry`** anywhere in the codebase.
 
 ## What's Proved
 
@@ -63,30 +63,30 @@ This result is **not available in Mathlib** and is a standalone contribution.
 | Area | Modules | Contents |
 |------|---------|----------|
 | **MDP Theory** | 22 | Bellman equations, contraction, value/policy iteration, simulation lemma, finite-horizon, LP formulation, average reward, POMDP, constrained MDP, options, reward shaping, HJB |
-| **Concentration** | 25 | Hoeffding, Bernstein, Bennett, Azuma-Hoeffding, McDiarmid, Talagrand, sub-Gaussian, matrix Bernstein, self-normalized, Johnson-Lindenstrauss, large deviations, generative model PAC |
+| **Concentration** | 24 | Hoeffding, Bernstein, Bennett, Azuma-Hoeffding, McDiarmid, Talagrand, sub-Gaussian, matrix Bernstein, self-normalized, Johnson-Lindenstrauss, large deviations, generative model PAC |
 | **Bandits** | 8 | UCB (gap-dependent + worst-case), LinUCB, EXP3, Thompson sampling, lower bounds, probabilistic regret |
 | **Generalization** | 10 | Sample complexity, uniform convergence, PAC-Bayes, Dudley integral, transfer RL, SLT bridge |
 | **Complexity** | 6 | VC dimension, Rademacher complexity, symmetrization, covering/packing, generic chaining, eluder dimension |
 | **Exploration** | 6 | UCBVI, variance-aware UCBVI, batch UCBVI, reward-free exploration |
 | **Policy Optimization** | 6 | Policy gradient, NPG, CPI, TRPO, actor-critic, gradient domination |
 | **Algorithms** | 6 | Q-learning, SARSA, linear TD, MCTS, model-based RL, generative Q-learning |
-| **Linear MDP** | 5 | Optimal Q linearity, elliptical potential lemma, regret bounds, LinUCB bridge |
-| **Other** | 25 | Offline RL, imitation learning, LQR, lower bounds, privacy, optimization, approximation, executable planners |
+| **Linear MDP** | 7 | Optimal Q linearity, elliptical potential lemma, regret bounds, LinUCB bridge, LSVI |
+| **Other** | 21 | Offline RL, bilinear rank, imitation learning, LQR, lower bounds, privacy, optimization, approximation, executable planners |
 
 ## Proof Architecture
 
 The library uses two proof tiers:
 
-- **Unconditional** (81 modules): Fully proved from definitions to final
+- **Unconditional** (94 modules): Fully proved from definitions to final
   theorem, building only on Mathlib. No assumptions beyond the problem setup.
 
-- **Conditional** (36 modules): The algebraic/compositional content is fully
+- **Conditional** (19 modules): The algebraic/compositional content is fully
   proved, but measure-theoretic steps (taking expectations, proving
   measurability, applying concentration to specific probability spaces) are
-  taken as hypotheses. These are marked with `[CONDITIONAL HYPOTHESIS]`
-  comments. The conditional hypotheses represent plumbing between the proved
-  concentration inequalities and the proved algorithm analysis -- the math on
-  both sides is done, the wiring through Lean's measure theory API is deferred.
+  taken as hypotheses. These hypotheses mark where Mathlib's current API
+  ends — the math on both sides is done, the wiring through Lean's measure
+  theory API is deferred pending upstream Mathlib additions. See
+  [`MODULES.md`](MODULES.md) for per-module blockers.
 
 Every module compiles with `--wfail` (warnings as failures) and passes
 `lean4checker`. See [`MODULES.md`](MODULES.md) for the full per-module index
@@ -108,7 +108,7 @@ at a pinned commit, with a compatibility patch for Lean 4 v4.28.0 applied by
 
 ```bash
 lake build RLGeneralization     # Trusted root: 116 modules
-lake build RLGeneralization.Draft  # Frontier modules (additional 5)
+lake build RLGeneralization.Draft  # Frontier modules (additional 3)
 ```
 
 ## CI

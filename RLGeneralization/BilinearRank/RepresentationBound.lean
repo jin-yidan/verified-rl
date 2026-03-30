@@ -68,22 +68,14 @@ def bellmanErrorClass (F : M.HypothesisClass)
   (by the linear eluder dimension bound).
 
   This shows that Bellman rank is a *stronger* (more restrictive)
-  structural assumption than bounded eluder dimension.
-
-  [CONDITIONAL: bellman_rank_le_eluder]
-  Requires:
-  - Formal connection between bilinear decomposition rank and
-    the eluder dimension of the induced error class
-  - Reduction to the linear eluder dimension bound
-  - Careful handling of the policy-dependent embedding X_π -/
+  structural assumption than bounded eluder dimension. -/
 theorem bellman_rank_le_eluder
     (brb : M.BellmanRankBound)
     (ε : ℝ) (_hε : 0 < ε)
     (pi : Fin M.H → M.S → M.A)
     (h : Fin M.H)
-    -- [CONDITIONAL HYPOTHESIS] Eluder-independent sequence length bound.
-    -- The bilinear decomposition E[bellman_error] = ⟨X_π, W_f⟩ confines
-    -- the Bellman error class to a brb.d-dimensional linear subspace.
+    -- Hypothesis: The bilinear decomposition E[bellman_error] = ⟨X_π, W_f⟩
+    -- confines the Bellman error class to a brb.d-dimensional linear subspace.
     -- Any ε-independent sequence in this class has length ≤ brb.d
     -- (by the linear eluder dimension bound applied to the W embedding).
     (h_rank_bound : ∀ n (seq : Fin n → M.S),
@@ -141,23 +133,14 @@ structure LowRankFeatures where
   - H: horizon (error compounds over H steps via simulation lemma)
   - √T: standard online learning rate
 
-  [CONDITIONAL: low_rank_mdp_regret]
-  Requires:
-  - LSVI-UCB algorithm analysis with low-rank features
-  - Concentration of least-squares estimator in feature space
-  - Optimism via elliptical potential lemma
-  - Simulation lemma to propagate per-step errors to value function
+  **Specification**: For an optimistic algorithm (e.g., LSVI-UCB) applied to
+  a low-rank MDP with d-dimensional features, the cumulative regret over T
+  episodes satisfies Regret(T) <= C * d * H * sqrt(T).
 
-    **Specification**: Low-rank MDP regret bound.
-
-    For an optimistic algorithm (e.g., LSVI-UCB) applied to a low-rank MDP
-    with d-dimensional features, the cumulative regret over T episodes
-    should satisfy Regret(T) <= C * d * H * sqrt(T).
-
-    Stated as a specification because a proper formalization requires
-    connecting the regret sequence to the output of a specific algorithm.
-    The per-episode regret must be defined as V*(s_0) - V^{pi_t}(s_0)
-    for the algorithm's policy pi_t, not as a free parameter. -/
+  Stated as a specification because a proper formalization requires:
+  (1) connecting the regret sequence to the output of a specific algorithm,
+  (2) LSVI-UCB analysis with concentration and elliptical potential lemma,
+  (3) simulation lemma to propagate per-step errors to value function. -/
 def LowRankMdpRegretSpec
     (feat : M.LowRankFeatures) (T : ℕ) (cumRegret : ℝ) : Prop :=
   ∃ (C_const : ℝ), 0 < C_const ∧

@@ -94,13 +94,10 @@ theorem belief_transition_markov
   - The reward depends only on (b, a) (beliefMDPReward_eq)
   - The observation likelihood sums to 1 (observationLikelihood_sum_one)
 
-  [CONDITIONAL: belief_mdp_is_mdp]
-  Requires:
-  - Measurability of the belief update map τ : Δ(S) × A × O → Δ(S)
-    with respect to the Borel σ-algebra on Δ(S) ⊂ ℝ^|S|
-  - Measurability of the transition kernel on the simplex
-  - These require measure-theoretic foundations for continuous-state
-    MDPs not currently in Mathlib -/
+  The full belief-MDP construction additionally requires measurability
+  of the belief update map τ : Δ(S) × A × O → Δ(S) on the simplex,
+  which needs continuous-state MDP foundations not yet in Mathlib.
+  The normalization result below is fully proved. -/
 theorem observation_likelihood_normalized :
     ∀ b : M.BeliefState, ∀ a : M.A,
       ∑ o, M.observationLikelihood b a o = 1 := by

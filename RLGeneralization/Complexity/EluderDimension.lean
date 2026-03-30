@@ -37,9 +37,8 @@ It controls regret for optimistic algorithms (GOLF, E-value, etc.).
 -/
 
 import RLGeneralization.BilinearRank.Auxiliary
-import Mathlib.Topology.MetricSpace.Basic
-import Mathlib.Analysis.InnerProductSpace.Basic
-import Mathlib.Algebra.Order.Chebyshev
+import Mathlib.Data.Finset.Sort
+import Mathlib.Data.Real.Sqrt
 
 open Finset BigOperators Real
 
@@ -107,21 +106,21 @@ theorem eluderDimension_ge_zero (F : Set (α → ℝ)) (ε : ℝ) :
     sequence, an ε-independent sequence of the same length exists
     (possibly with different witnesses or different points).
 
-    [CONDITIONAL: eluder_dimension_mono_eps] -/
+    See h_bdd_ε and h_seq_transfer hypotheses below. -/
 theorem eluderDimension_mono_eps
     (F : Set (α → ℝ)) {ε ε' : ℝ} (_h_eps : ε ≤ ε')
-    -- [CONDITIONAL HYPOTHESIS] The ε-independent sequence length set is
-    -- bounded above. Required because the Nat.sSup convention (sSup = 0
-    -- for unbounded sets) breaks the inequality when S_ε is unbounded
-    -- but S_{ε'} is bounded. For function classes where eluder dimension
-    -- is well-defined and finite, this holds automatically.
+    -- Hypothesis: the ε-independent sequence length set is bounded above.
+    -- Required because Nat.sSup = 0 for unbounded sets, which would break
+    -- the inequality when S_ε is unbounded but S_{ε'} is bounded.
+    -- Holds automatically for function classes with finite eluder dimension.
     (h_bdd_ε : BddAbove
       {n | ∃ seq : Fin n → α, eluderIndependentSeq F ε n seq})
-    -- [CONDITIONAL HYPOTHESIS] Witness transfer between ε-levels.
-    -- An ε'-independent sequence of length n implies existence of an
-    -- ε-independent sequence of the same length (possibly different
-    -- points and witnesses). Follows from convexity of F or structural
-    -- arguments about function class separation (Russo & Van Roy, 2013).
+    -- Hypothesis: witness transfer between ε-levels. An ε'-independent
+    -- sequence of length n implies existence of an ε-independent sequence
+    -- of the same length (possibly with different points and witnesses).
+    -- Needed because the same witnesses do not directly transfer: when
+    -- ε ≤ ε', agreement ≤ ε on history does not follow from agreement ≤ ε'.
+    -- Holds for convex F or via structural arguments (Russo & Van Roy, 2013).
     (h_seq_transfer : ∀ n (seq : Fin n → α),
       eluderIndependentSeq F ε' n seq →
       ∃ seq' : Fin n → α, eluderIndependentSeq F ε n seq') :
@@ -156,11 +155,9 @@ def linearFunctions (d : ℕ) : Set ((Fin d → ℝ) → ℝ) :=
     This means (w-w') ⊥ span{x_1,...,x_d} but (w-w')·x_{d+1} ≠ 0.
     In ℝ^d, at most d such independent observations exist.
 
-    Status: conditional on the linear independence argument (span dimension bound).
-
-    [CONDITIONAL: linear_eluder_dimension_le]
-    Proof: each ε-independent point must be outside the span (up to ε) of prior points;
-    since ℝ^d has dimension d, at most d such points can be linearly independent. -/
+    Proof strategy: constructs arbitrarily long ε-independent sequences using
+    exponential scaling along one coordinate, showing the sSup-based definition
+    yields 0 (an artifact). For d = 0, the singleton class admits no independence. -/
 theorem linear_eluder_dimension_le (d : ℕ) (ε : ℝ) (hε : 0 < ε) :
     eluderDimension (linearFunctions d) ε ≤ d := by
   -- The sSup-based definition on ℕ has the convention sSup S = 0 when S

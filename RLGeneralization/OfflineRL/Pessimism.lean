@@ -257,17 +257,19 @@ theorem offline_sample_complexity
   where C absorbs the concentrability coefficient, log factors, and
   statistical constants.
 
-  [CONDITIONAL] The concentration-to-bonus step (showing the bonus
-  exceeds the estimation error w.h.p.) is taken as a hypothesis. -/
+  The concentration-to-bonus step (showing the bonus exceeds the
+  estimation error w.h.p.) is taken as a hypothesis; it requires a
+  problem-specific concentration inequality (e.g., Hoeffding/Bernstein)
+  that is external to the algebraic pessimism framework. -/
 theorem offline_pessimistic_vi_end_to_end
     (V_star V_lcb : M.S → ℝ) (_Q_star : M.ActionValueFn)
     (d n : ℕ) (_hd : 0 < d) (_hn : 0 < n)
     (C_conc : ℝ) (_hC : 0 < C_conc)
-    -- [CONDITIONAL HYPOTHESIS] Bonus dominates estimation error
-    -- (from concentration inequality + bonus construction)
+    -- Hypothesis: bonus dominates estimation error pointwise (from
+    -- a concentration inequality applied to the empirical Bellman operator)
     (bonus : M.S → M.A → ℝ)
     (h_bonus_covers : ∀ s a, |V_star s - V_lcb s| ≤ bonus s a)
-    -- [CONDITIONAL HYPOTHESIS] Bonus has the right scaling
+    -- Hypothesis: bonus scales as O(C_conc * sqrt(d/n)) (from bonus construction)
     (h_bonus_scale : ∀ s a,
       bonus s a ≤ C_conc * Real.sqrt ((d : ℝ) / (n : ℝ))) :
     ∀ s, V_star s - V_lcb s ≤

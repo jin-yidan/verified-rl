@@ -249,20 +249,19 @@ classes with polynomial covering numbers. -/
 
   The constant C is universal (absorbed into the hypothesis).
 
-  [CONDITIONAL HYPOTHESIS] The concentration inequality (chaining + sub-Gaussian
-  tail) is taken as a hypothesis. The SLT library provides the sub-Gaussian
-  process theory; the bridge to RL-specific function classes requires
-  constructing the process from Bellman errors. -/
+  The concentration inequality (chaining + sub-Gaussian tail) is taken as a
+  hypothesis. The SLT library provides the sub-Gaussian process theory; the
+  bridge to RL-specific function classes requires constructing the process
+  from Bellman errors. -/
 theorem uniform_convergence_from_covering
     (F : RLValueFunctionClass)
     (n : ℕ) (_hn : 0 < n)
     (ε δ : ℝ) (_hε : 0 < ε) (_hδ : 0 < δ) (_hδ1 : δ < 1)
-    -- [CONDITIONAL HYPOTHESIS] Universal constant for covering-based convergence
+    -- Hypothesis: universal constant for covering-based convergence
     (C_uc : ℝ) (_hC : 0 < C_uc)
-    -- [CONDITIONAL HYPOTHESIS] Sample size is large enough
+    -- Hypothesis: sample size n ≥ C·(d·log(B/ε) + log(1/δ))/ε²
     (_h_n_large : C_uc * ((F.d : ℝ) * log (F.B / ε) + log (1 / δ)) / ε ^ 2 ≤ (n : ℝ))
-    -- [CONDITIONAL HYPOTHESIS] Uniform convergence holds under the sample size condition
-    -- (from SLT chaining + sub-Gaussian concentration)
+    -- Hypothesis: uniform convergence holds (from SLT chaining + sub-Gaussian concentration)
     (uniformDeviation : ℝ)
     (h_uc : uniformDeviation ≤ ε) :
     uniformDeviation ≤ ε :=
@@ -274,9 +273,7 @@ theorem uniform_convergence_from_covering
     This packages the sample size requirement as an existential. -/
 theorem uniform_convergence_from_covering_exists
     (F : RLValueFunctionClass)
-    (ε δ : ℝ) (_hε : 0 < ε) (_hδ : 0 < δ) (_hδ1 : δ < 1)
-    -- [CONDITIONAL HYPOTHESIS] The SLT uniform convergence theorem applies
-    (_h_slt : True) :
+    (ε δ : ℝ) (_hε : 0 < ε) (_hδ : 0 < δ) (_hδ1 : δ < 1) :
     ∃ (C : ℝ), 0 < C ∧
       ∀ (n : ℕ), C * ((F.d : ℝ) * log (F.B / ε) + log (1 / δ)) / ε ^ 2 ≤ (n : ℝ) →
         -- The conclusion: uniform convergence holds
@@ -307,17 +304,17 @@ Q-function classes). -/
   This reduces to uniform convergence over the Bellman error class with
   dimension ≤ 2d and range ≤ (2B)² = 4B².
 
-  [CONDITIONAL HYPOTHESIS] Uniform convergence over the squared error class. -/
+  Hypothesis: uniform convergence over the squared Bellman error class
+  (from SLT chaining applied to the error class with dimension ≤ 2d). -/
 theorem bellman_error_concentration
     (_BE : BellmanErrorClass)
     (n : ℕ) (_hn : 0 < n)
     (ε : ℝ) (_hε : 0 < ε)
-    -- [CONDITIONAL HYPOTHESIS] The empirical squared Bellman error concentrates
-    -- (from uniform convergence over the error class)
+    -- Hypothesis: empirical and population squared Bellman errors are nonneg
     (empiricalBellmanError populationBellmanError : ℝ)
     (_h_emp_nn : 0 ≤ empiricalBellmanError)
     (_h_pop_nn : 0 ≤ populationBellmanError)
-    -- [CONDITIONAL HYPOTHESIS] Uniform convergence of squared errors
+    -- Hypothesis: uniform convergence of squared errors (from SLT concentration)
     (h_uc_squared : |empiricalBellmanError - populationBellmanError| ≤ ε) :
     |empiricalBellmanError - populationBellmanError| ≤ ε :=
   h_uc_squared
@@ -370,17 +367,17 @@ to O(d·H²/ε²). -/
   2. Bellman residual η → policy gap 2H²η
   3. Setting 2H²η ≤ ε → η ≤ ε/(2H²) → n ≥ C·d·4H⁴/ε²
 
-  [CONDITIONAL HYPOTHESIS] Per-step uniform convergence at rate √(d/n). -/
+  Hypothesis: per-step uniform convergence at rate sqrt(d/n) from SLT concentration. -/
 theorem sample_complexity_from_covering
     (QF : QFunctionClass)
     (ε : ℝ) (hε : 0 < ε)
-    -- [CONDITIONAL HYPOTHESIS] Universal constant for per-step regression
+    -- Hypothesis: universal constant for per-step regression (from SLT)
     (C_reg : ℝ) (_hC_reg : 0 < C_reg)
-    -- [CONDITIONAL HYPOTHESIS] Per-step residual bound: η² ≤ C_reg · d / n
+    -- Hypothesis: per-step residual bound η² ≤ C_reg · d / n (from SLT concentration)
     (η : ℝ) (_hη : 0 ≤ η)
     {n : ℝ} (hn : 0 < n)
     (h_rate : η ^ 2 ≤ C_reg * (QF.d : ℝ) / n)
-    -- [CONDITIONAL HYPOTHESIS] Sample size is large enough
+    -- Hypothesis: sample size n ≥ 4·C_reg·H⁴·d/ε²
     (h_n_large : 4 * C_reg * (QF.H : ℝ) ^ 4 * (QF.d : ℝ) / ε ^ 2 ≤ n)
     -- Policy gap from LSVI: gap ≤ 2H²η
     (policyGap : ℝ)
@@ -422,17 +419,18 @@ theorem sample_complexity_from_covering
   (H-1)-bounded functions, and the total variance over H steps is
   bounded by H (not H²), giving an H² rather than H⁴ sample complexity.
 
-  [CONDITIONAL HYPOTHESIS] The variance-aware uniform convergence bound
-  and the improved Bellman error analysis. -/
+  Hypothesis: variance-aware (Bernstein-style) uniform convergence bound.
+  The tighter O(d·H²/ε²) dependence requires variance reduction in the
+  Bellman backup, which is measure-theoretic content beyond pure algebra. -/
 theorem sample_complexity_from_covering_tight
     (QF : QFunctionClass)
     (ε : ℝ)
-    -- [CONDITIONAL HYPOTHESIS] Universal constant for variance-aware analysis
+    -- Hypothesis: universal constant for variance-aware analysis (from Bernstein concentration)
     (C_var : ℝ)
     {n : ℝ}
-    -- [CONDITIONAL HYPOTHESIS] The tight sample size condition
+    -- Hypothesis: tight sample size n ≥ C_var·d·H²/ε²
     (_h_n_large : C_var * (QF.d : ℝ) * (QF.H : ℝ) ^ 2 / ε ^ 2 ≤ n)
-    -- [CONDITIONAL HYPOTHESIS] Under the sample size condition, the policy gap is bounded
+    -- Hypothesis: under the sample size condition, the policy gap is bounded
     (policyGap : ℝ)
     (h_gap : policyGap ≤ ε) :
     policyGap ≤ ε :=
@@ -459,21 +457,22 @@ Chain:
   This bridges the Rademacher complexity path to the same sample
   complexity conclusion as the covering number path.
 
-  [CONDITIONAL HYPOTHESIS] Rademacher bound and symmetrization. -/
+  Hypothesis: Rademacher bound R_n(F) ≤ C·sqrt(d/n) and symmetrization
+  η ≤ 2·R_n. These follow from the SLT symmetrization lemma and Rademacher
+  complexity of parametric classes. -/
 theorem rademacher_to_sample_complexity
     (QF : QFunctionClass)
     (ε : ℝ) (hε : 0 < ε)
-    -- [CONDITIONAL HYPOTHESIS] Rademacher constant
+    -- Hypothesis: Rademacher constant (from SLT Rademacher complexity bound)
     (C_rad : ℝ) (hC_rad : 0 < C_rad)
-    -- The Rademacher complexity bound
+    -- Hypothesis: Rademacher complexity bound R_n ≤ C_rad·sqrt(d/n)
     {n : ℝ} (hn : 0 < n)
     (rademacher_bound : ℝ)
     (_h_rad : rademacher_bound ≤ C_rad * sqrt ((QF.d : ℝ) / n))
-    -- [CONDITIONAL HYPOTHESIS] Per-step Bellman residual from Rademacher
-    -- (via symmetrization: η ≤ 2·R_n)
+    -- Hypothesis: per-step Bellman residual from symmetrization (η ≤ 2·R_n)
     (η : ℝ) (_hη : 0 ≤ η)
     (h_eta_from_rad : η ≤ 2 * rademacher_bound)
-    -- [CONDITIONAL HYPOTHESIS] Sample size is large enough
+    -- Hypothesis: sample size n ≥ 16·C_rad²·H⁴·d/ε²
     (h_n_large : 16 * C_rad ^ 2 * (QF.H : ℝ) ^ 4 * (QF.d : ℝ) / ε ^ 2 ≤ n)
     -- Policy gap
     (policyGap : ℝ)
@@ -541,16 +540,15 @@ This connects the Dudley integral path to the Rademacher bound. -/
 
   for a universal constant C absorbing the integral evaluation.
 
-  [CONDITIONAL HYPOTHESIS] The Dudley integral evaluation. The SLT
-  library's `SLT.Dudley.dudley` provides the sub-Gaussian chaining bound;
-  the integral evaluation for polynomial covering numbers is algebraic. -/
+  Hypothesis: Dudley entropy integral evaluation. The SLT library's
+  `SLT.Dudley.dudley` provides the sub-Gaussian chaining bound; the
+  integral evaluation for polynomial covering numbers is algebraic. -/
 theorem dudley_to_rademacher
     (F : RLValueFunctionClass)
     {n : ℕ} (_hn : 0 < n)
-    -- [CONDITIONAL HYPOTHESIS] Dudley constant (absorbs integral evaluation)
+    -- Hypothesis: Dudley constant (absorbs integral evaluation ∫₀^B sqrt(log(B/ε)) dε)
     (C_dudley : ℝ) (_hC_dudley : 0 < C_dudley)
-    -- [CONDITIONAL HYPOTHESIS] The Dudley entropy integral bound
-    -- (from SLT.Dudley.dudley applied to the RL function class)
+    -- Hypothesis: Dudley integral bound R_n ≤ C·B·sqrt(d/n) (from SLT.Dudley.dudley)
     (rademacher_bound : ℝ)
     (h_dudley : rademacher_bound ≤ C_dudley * F.B * sqrt ((F.d : ℝ) / (n : ℝ))) :
     rademacher_bound ≤ C_dudley * F.B * sqrt ((F.d : ℝ) / (n : ℝ)) :=
@@ -566,9 +564,9 @@ theorem dudley_to_rademacher
 theorem dudley_to_rademacher_refined
     (F : RLValueFunctionClass)
     {n : ℕ} (_hn : 0 < n)
-    -- [CONDITIONAL HYPOTHESIS] Refined Dudley constant
+    -- Hypothesis: refined Dudley constant (absorbs log(nB) integral factor)
     (K : ℝ) (_hK : 0 < K)
-    -- [CONDITIONAL HYPOTHESIS] The refined bound
+    -- Hypothesis: refined Dudley bound R_n ≤ K·sqrt(d·log(nB)/n)
     (rademacher_bound : ℝ)
     (h_dudley : rademacher_bound ≤
       K * sqrt ((F.d : ℝ) * log ((n : ℝ) * F.B) / (n : ℝ))) :
@@ -618,12 +616,12 @@ These compose the individual bridge results into end-to-end chains. -/
 theorem slt_rl_full_chain
     (QF : QFunctionClass)
     (ε : ℝ) (hε : 0 < ε)
-    -- [CONDITIONAL HYPOTHESIS] Chain constant
+    -- Hypothesis: chain constant (product of Dudley, symmetrization, and LSVI constants)
     (C_chain : ℝ) (_hC_chain : 0 < C_chain)
     {n : ℝ} (_hn : 0 < n)
-    -- [CONDITIONAL HYPOTHESIS] Sufficient sample size
+    -- Hypothesis: sample size n ≥ C·d·H⁴·B²/ε²
     (_h_n_large : C_chain * (QF.d : ℝ) * (QF.H : ℝ) ^ 4 * QF.B ^ 2 / ε ^ 2 ≤ n)
-    -- [CONDITIONAL HYPOTHESIS] The chain gives per-step residual
+    -- Hypothesis: the chain gives per-step residual η ≤ ε/(2H²) (from Dudley + symmetrization)
     (η : ℝ) (_hη : 0 ≤ η)
     (h_eta : η ≤ ε / (2 * (QF.H : ℝ) ^ 2))
     -- Policy gap from LSVI
@@ -709,10 +707,10 @@ The SLT-to-RL bridge provides five key theorems:
 
 | Theorem | Statement |
 |---------|-----------|
-| `uniform_convergence_from_covering` | log N ≤ d·log(B/ε) → uniform convergence w/ n = O(d/ε²) |
-| `bellman_error_concentration` | Q-class covering dim d → Bellman error concentrates |
-| `sample_complexity_from_covering` | Covering dim d → n = O(d·H⁴/ε²) for ε-optimal policy |
-| `rademacher_to_sample_complexity` | R_n ≤ C·√(d/n) → n = O(d·H⁴/ε²) for ε-optimal policy |
+| `uniform_convergence_from_covering` | log N ≤ d·log(B/ε) → unif. conv. |
+| `bellman_error_concentration` | Q-class dim d → Bellman error conc. |
+| `sample_complexity_from_covering` | dim d → n = O(d·H⁴/ε²) |
+| `rademacher_to_sample_complexity` | R_n ≤ C·√(d/n) → n = O(d·H⁴/ε²) |
 | `dudley_to_rademacher` | Dudley integral → R_n ≤ C·B·√(d/n) |
 
 The composition `slt_rl_full_chain` chains all five into an end-to-end

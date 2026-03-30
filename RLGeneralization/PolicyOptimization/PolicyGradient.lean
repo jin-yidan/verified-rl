@@ -757,8 +757,8 @@ theorem softmax_policy_gradient_advantage_form
     (pgd : M.PolicyGradientDerivative)
     (θ : Fin pgd.d → ℝ)
     (V : M.StateValueFn)
-    -- [CONDITIONAL HYPOTHESIS] Score sums to zero (proved for softmax above,
-    -- taken as hypothesis here to work with the abstract pgd structure)
+    -- Score sums to zero: proved for softmax (score_function_sum_zero above),
+    -- taken as hypothesis here to work with the abstract pgd structure
     (h_score_zero : ∀ s (i : Fin pgd.d),
       ∑ a, (pgd.pi_theta θ).prob s a * pgd.score θ s a i = 0) :
     ∀ (i : Fin pgd.d),

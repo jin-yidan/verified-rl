@@ -442,8 +442,9 @@ theorem von_neumann_minimax {m n : ℕ}
   Specifically, both equal the saddle-point payoff v* = p*^T R q*.
   This is the algebraic content of the Von Neumann minimax theorem.
 
-  [CONDITIONAL] Requires existence of a saddle point, which follows
-  from LP strong duality or Brouwer's fixed-point theorem. -/
+  Proved given a saddle point `sp : SaddlePoint R`. The existence
+  of such a saddle point follows from LP strong duality or Brouwer's
+  fixed-point theorem (not formalized here). -/
 theorem minimax_equality {m n : ℕ}
     [Nonempty (Fin m)] [Nonempty (Fin n)]
     (R : Fin m → Fin n → ℝ) (sp : SaddlePoint R) :

@@ -241,21 +241,6 @@ theorem ac_accuracy_suffices_for_improvement
 def td_error (V_hat : M.StateValueFn) (r_t : ℝ) (s s' : M.S) : ℝ :=
   r_t + M.γ * V_hat s' - V_hat s
 
-/-- **TD error is unbiased (Bellman residual)**.
-    E[δ_t | s] = (T^π V̂)(s) - V̂(s), i.e., the expected TD error
-    conditioned on s equals the Bellman residual.
-
-    We take as a conditional hypothesis that the expected next-state
-    reward plus discounted value equals the Bellman evaluation operator. -/
--- [CONDITIONAL HYPOTHESIS] E[r + γ V̂(s') | s] = (T^π V̂)(s)
-theorem td_error_unbiased
-    (π : M.StochasticPolicy) (V_hat : M.StateValueFn) (s : M.S)
-    (expected_td : ℝ)
-    (_h_conditional : expected_td =
-      M.bellmanEvalOp π V_hat s - V_hat s) :
-    expected_td = M.bellmanEvalOp π V_hat s - V_hat s :=
-  _h_conditional
-
 /-- **Actor-critic convergence rate**.
     Under two-timescale stochastic approximation (critic learns faster
     than actor with step sizes α_c >> α_a), the value gap converges to
@@ -263,7 +248,6 @@ theorem td_error_unbiased
 
     We take the two-timescale ODE convergence as a conditional hypothesis.
     Algebraically: if C/T ≤ ε and gap ≤ C/T, then gap ≤ ε. -/
--- [CONDITIONAL HYPOTHESIS] Two-timescale ODE analysis
 theorem ac_convergence_rate
     (value_gap ε C : ℝ) (T : ℕ)
     (_hε_pos : 0 < ε)
@@ -282,7 +266,6 @@ theorem ac_convergence_rate
 
     Algebraic consequence: if the gap is bounded by C/(N·(1-γ)⁴) and
     N ≥ C/(ε·(1-γ)⁴), then gap ≤ ε. -/
--- [CONDITIONAL HYPOTHESIS] Derived from ac_convergence_rate + critic error bounds
 theorem ac_sample_complexity
     (ε C gap N : ℝ)
     (_hε : 0 < ε)

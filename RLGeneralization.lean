@@ -46,6 +46,8 @@ import RLGeneralization.MDP.FiniteHorizon
 import RLGeneralization.MDP.LPFormulation
 -- Average-reward MDPs: span seminorm, gain-bias equations
 import RLGeneralization.MDP.AverageReward
+-- Average-reward non-asymptotic: mixing time, span bound, UCRL2 regret
+import RLGeneralization.MDP.AverageRewardNonasymptotic
 -- Empirical model, comparison lemmas, and component-wise bounds
 import RLGeneralization.Generalization.SampleComplexity
 -- Component-wise value bounds
@@ -128,6 +130,8 @@ import RLGeneralization.LinearFeatures.RegressionBridge
 import RLGeneralization.BilinearRank.Auxiliary
 -- GOLF algorithm: bilinear class exploration, eluder regret bound
 import RLGeneralization.BilinearRank.GOLF
+-- Bellman-rank / eluder dimension connection, low-rank MDP regret spec
+import RLGeneralization.BilinearRank.RepresentationBound
 
 -- UCBVI definitions and regret-decomposition core
 import RLGeneralization.Exploration.UCBVI

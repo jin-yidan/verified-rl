@@ -138,8 +138,10 @@ theorem RobbinsSiegmundHypothesis.X_bounded_by_initial
     have hsum_nn : 0 ≤ hyp.X 0 + ∑ k ∈ Finset.range n, hyp.Z k := by
       linarith [hyp.X_nonneg 0]
     calc hyp.X n
-        ≤ exp (∑ k ∈ Finset.range n, hyp.Y k) * (hyp.X 0 + ∑ k ∈ Finset.range n, hyp.Z k) := hn
-      _ ≤ exp hyp.S_Y * (hyp.X 0 + hyp.S_Z) := mul_le_mul hexp hsum hsum_nn (exp_nonneg _)
+        ≤ exp (∑ k ∈ Finset.range n, hyp.Y k) *
+          (hyp.X 0 + ∑ k ∈ Finset.range n, hyp.Z k) := hn
+      _ ≤ exp hyp.S_Y * (hyp.X 0 + hyp.S_Z) :=
+          mul_le_mul hexp hsum hsum_nn (exp_nonneg _)
       _ = exp hyp.S_Y * hyp.X 0 + exp hyp.S_Y * hyp.S_Z := by ring
   -- Prove intermediate claim by induction
   intro n
@@ -261,10 +263,6 @@ and defer the construction. -/
 
 /-- **Robbins-Siegmund convergence theorem** (conditional).
 
-[CONDITIONAL] Takes convergence/summability as hypothesis. In the full version,
-L and h_limit would be conclusions derived from the supermartingale structure,
-not hypotheses.
-
 Given the Robbins-Siegmund hypothesis, the sequence X_n converges
 to a finite nonneg limit L:
 
@@ -272,12 +270,14 @@ to a finite nonneg limit L:
 
 In the stochastic version, this is almost-sure convergence.
 
-Requires connecting the deterministic recursion to the a.s. event
-via conditional expectation and the supermartingale convergence
-theorem. -/
+-- Hypothesis: h_cauchy encapsulates the Cauchy property that in the full
+-- probabilistic proof follows from the nonneg supermartingale convergence
+-- theorem applied to the deflated process X_n / ∏(1+Y_k). Proving this
+-- requires measure-theoretic conditional expectation and filtration machinery
+-- beyond what is currently composed in Mathlib's discrete-time API. -/
 theorem robbins_siegmund_conditional (hyp : RobbinsSiegmundHypothesis)
     (L : ℝ) (_hL : 0 ≤ L)
-    -- X is eventually within ε of L (Cauchy-like property from supermartingale)
+    -- Hypothesis: Cauchy convergence from supermartingale convergence theorem
     (h_cauchy : ∀ ε : ℝ, 0 < ε → ∃ N : ℕ, ∀ n, N ≤ n → |hyp.X n - L| < ε)
     -- X is bounded (from X_bounded_by_initial)
     (_h_bounded : ∀ n, hyp.X n ≤ exp hyp.S_Y * hyp.X 0 + exp hyp.S_Y * hyp.S_Z) :
@@ -285,11 +285,7 @@ theorem robbins_siegmund_conditional (hyp : RobbinsSiegmundHypothesis)
   rw [Metric.tendsto_atTop]
   exact h_cauchy
 
-/-- **Robbins-Siegmund summability** (conditional).
-
-[CONDITIONAL] Takes convergence/summability as hypothesis. In the full version,
-bound and h_summable would be conclusions derived from the supermartingale
-structure, not hypotheses.
+/-- **Robbins-Siegmund summability** (unconditional via recursion).
 
 Under the Robbins-Siegmund hypothesis, the positive decrements
 of X are summable:
@@ -299,23 +295,50 @@ of X are summable:
 This is used in Q-learning to show that the error sequence
 eventually stops increasing.
 
-Requires the same measure-theoretic framework as robbins_siegmund_conditional.
-
-[CONDITIONAL: robbins_siegmund_summability_conditional]
-Requires:
-- Upward-jump bound: ∑ (X_{n+1} - X_n)⁺ ≤ ∑ Z_n, which in the full
-  probabilistic proof follows from the supermartingale property and
-  summability of Y_n·X_n via convergence of X_n. -/
-theorem robbins_siegmund_summability_conditional (hyp : RobbinsSiegmundHypothesis)
-    -- [CONDITIONAL HYPOTHESIS] Upward jumps in X are bounded by Z terms.
-    -- In the full probabilistic proof, this follows from the supermartingale
-    -- property: X_{n+1} - X_n ≤ Y_n·X_n + Z_n pointwise, and after X_n → L,
-    -- the ∑ Y_n·X_n term is controlled by ∑ Y_n < ∞ and boundedness of X_n.
-    (h_upward : ∀ N, ∑ n ∈ Finset.range N, max (hyp.X (n + 1) - hyp.X n) 0 ≤
-        ∑ n ∈ Finset.range N, hyp.Z n) :
+The proof decomposes max(X_n - X_{n+1}, 0) using the positive-part
+identity, bounds the upward jumps via the recursion
+(X_{n+1} - X_n ≤ Y_n·X_n + Z_n), and uses the telescoping sum
+together with X_bounded_by_initial to control ∑ Y_n·X_n. -/
+theorem robbins_siegmund_summability_unconditional (hyp : RobbinsSiegmundHypothesis) :
     ∀ N, ∑ n ∈ Finset.range N, max (hyp.X n - hyp.X (n + 1)) 0 ≤
-      hyp.X 0 + hyp.S_Z := by
+      hyp.X 0 + hyp.S_Y * (exp hyp.S_Y * hyp.X 0 + exp hyp.S_Y * hyp.S_Z) + hyp.S_Z := by
   intro N
+  -- Per-step upward jump bound from recursion: max(X_{n+1} - X_n, 0) ≤ Y_n·X_n + Z_n
+  have h_upward_step : ∀ n, max (hyp.X (n + 1) - hyp.X n) 0 ≤
+      hyp.Y n * hyp.X n + hyp.Z n := by
+    intro n
+    apply max_le
+    · linarith [hyp.recursion n]
+    · have := hyp.Y_nonneg n; have := hyp.X_nonneg n; have := hyp.Z_nonneg n
+      nlinarith
+  -- Sum the upward jump bounds
+  have h_upward_sum : ∑ n ∈ Finset.range N, max (hyp.X (n + 1) - hyp.X n) 0 ≤
+      ∑ n ∈ Finset.range N, (hyp.Y n * hyp.X n + hyp.Z n) :=
+    Finset.sum_le_sum fun n _ => h_upward_step n
+  -- Bound ∑ Y_n·X_n + ∑ Z_n
+  have h_upward : ∑ n ∈ Finset.range N, max (hyp.X (n + 1) - hyp.X n) 0 ≤
+      hyp.S_Y * (exp hyp.S_Y * hyp.X 0 + exp hyp.S_Y * hyp.S_Z) + hyp.S_Z := by
+    calc ∑ n ∈ Finset.range N, max (hyp.X (n + 1) - hyp.X n) 0
+        ≤ ∑ n ∈ Finset.range N, (hyp.Y n * hyp.X n + hyp.Z n) := h_upward_sum
+      _ = ∑ n ∈ Finset.range N, hyp.Y n * hyp.X n +
+          ∑ n ∈ Finset.range N, hyp.Z n := Finset.sum_add_distrib
+      _ ≤ hyp.S_Y * (exp hyp.S_Y * hyp.X 0 + exp hyp.S_Y * hyp.S_Z) + hyp.S_Z := by
+          have hYX : ∑ n ∈ Finset.range N, hyp.Y n * hyp.X n ≤
+              hyp.S_Y * (exp hyp.S_Y * hyp.X 0 + exp hyp.S_Y * hyp.S_Z) := by
+            calc ∑ n ∈ Finset.range N, hyp.Y n * hyp.X n
+                ≤ ∑ n ∈ Finset.range N, hyp.Y n *
+                    (exp hyp.S_Y * hyp.X 0 + exp hyp.S_Y * hyp.S_Z) :=
+                  Finset.sum_le_sum fun n _ =>
+                    mul_le_mul_of_nonneg_left (hyp.X_bounded_by_initial n) (hyp.Y_nonneg n)
+              _ = (∑ n ∈ Finset.range N, hyp.Y n) *
+                    (exp hyp.S_Y * hyp.X 0 + exp hyp.S_Y * hyp.S_Z) := by
+                  rw [Finset.sum_mul]
+              _ ≤ hyp.S_Y * (exp hyp.S_Y * hyp.X 0 + exp hyp.S_Y * hyp.S_Z) := by
+                  apply mul_le_mul_of_nonneg_right (hyp.sum_Y_bound N)
+                  have : 0 ≤ hyp.S_Z := le_trans (Finset.sum_nonneg fun k _ => hyp.Z_nonneg k)
+                    (hyp.sum_Z_bound 0)
+                  nlinarith [exp_nonneg hyp.S_Y, hyp.X_nonneg 0]
+          linarith [hyp.sum_Z_bound N]
   -- Positive-part identity: max(a, 0) ≤ a + max(-a, 0) (actually equality)
   have h_le : ∀ n, max (hyp.X n - hyp.X (n + 1)) 0 ≤
       (hyp.X n - hyp.X (n + 1)) + max (hyp.X (n + 1) - hyp.X n) 0 := by
@@ -337,20 +360,17 @@ theorem robbins_siegmund_summability_conditional (hyp : RobbinsSiegmundHypothesi
     _ = (∑ n ∈ Finset.range N, (hyp.X n - hyp.X (n + 1))) +
         ∑ n ∈ Finset.range N, max (hyp.X (n + 1) - hyp.X n) 0 :=
         Finset.sum_add_distrib
-    _ ≤ hyp.X 0 + hyp.S_Z := by
+    _ ≤ hyp.X 0 + hyp.S_Y * (exp hyp.S_Y * hyp.X 0 + exp hyp.S_Y * hyp.S_Z) + hyp.S_Z := by
         -- Telescope the first sum
-        have h_tele : ∑ n ∈ Finset.range N, (hyp.X n - hyp.X (n + 1)) =
-            hyp.X 0 - hyp.X N := by
-          induction N with
+        have h_tele : ∀ M, ∑ n ∈ Finset.range M, (hyp.X n - hyp.X (n + 1)) =
+            hyp.X 0 - hyp.X M := by
+          intro M; induction M with
           | zero => simp
-          | succ n ih =>
+          | succ m ih =>
             rw [Finset.sum_range_succ, ih]
             ring
         rw [h_tele]
-        have hXN := hyp.X_nonneg N
-        have h_up := h_upward N
-        have h_Z := hyp.sum_Z_bound N
-        linarith
+        linarith [hyp.X_nonneg N, h_upward]
 
 /-! ### Application Interface
 
@@ -485,9 +505,10 @@ theorem decrement_bound_nonneg :
 theorem robbins_siegmund_as_convergence
     -- The limit and convergence (from supermartingale convergence theorem)
     (L : ℝ) (hL_nn : 0 ≤ L) (hL_le : L ≤ hyp.uniformBound)
-    -- [CONDITIONAL HYPOTHESIS] a.s. convergence from supermartingale theory:
-    -- the deflated process X_n/∏(1+Y_k) converges by the nonneg
-    -- supermartingale convergence theorem, giving X_n → L.
+    -- Hypothesis: a.s. convergence from the nonneg supermartingale convergence
+    -- theorem applied to the deflated process X_n/∏(1+Y_k). This requires
+    -- measure-theoretic conditional expectation and filtration composition
+    -- not yet available in composed form in Mathlib.
     (h_converges : Tendsto hyp.X atTop (nhds L)) :
     -- (1) X_n converges to L
     Tendsto hyp.X atTop (nhds L) ∧

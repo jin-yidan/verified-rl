@@ -49,8 +49,9 @@ variable (M : FiniteHorizonMDP)
     L1 error is ε_T, then backward induction gives value error ≤ H² · ε_T.
     This is the finite-horizon analogue of the simulation lemma.
 
-    [CONDITIONAL] Returns hypothesis directly. This is a type-level
-    specification, not a genuine theorem. -/
+    Hypotheses: assumes per-step backward-induction errors are each
+    bounded by H·ε_T, and that the total value error decomposes as
+    a sum of per-step errors (standard backward-induction structure). -/
 theorem value_error_from_transition
     (V_hat V_star : M.S → ℝ)
     (ε_T : ℝ)
