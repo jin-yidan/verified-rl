@@ -94,11 +94,41 @@ def render_status() -> str:
     return "\n".join(lines)
 
 
+def render_stats_json() -> str:
+    """Emit a JSON object with verification stats for dashboard consumption."""
+    try:
+        manifest = json.loads(MANIFEST.read_text())
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        print(f"error: failed to load {MANIFEST}: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    verified = manifest["verified_target"]["modules"]
+    draft = manifest["draft_target"]["modules"]
+    excluded = manifest.get("excluded_modules", [])
+    counts = Counter(entry["status"] for entry in verified)
+
+    stats = {
+        "verified_modules": len(verified),
+        "draft_modules": len(draft),
+        "excluded_modules": len(excluded),
+        "exact": counts.get("exact", 0),
+        "weaker": counts.get("weaker", 0),
+        "conditional": counts.get("conditional", 0),
+    }
+    return json.dumps(stats, indent=2)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true", help="Write STATUS.md")
     parser.add_argument("--check", action="store_true", help="Check STATUS.md")
+    parser.add_argument("--stats-json", action="store_true",
+                        help="Print verification stats as JSON")
     args = parser.parse_args()
+
+    if args.stats_json:
+        sys.stdout.write(render_stats_json() + "\n")
+        return
 
     content = render_status()
     if args.write:

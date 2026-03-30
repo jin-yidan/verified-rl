@@ -278,6 +278,35 @@ theorem behavior_cloning_bound (I : ImitationSetting)
               rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]; ring
     _ = (I.mdp.H : ℝ) ^ 2 * I.epsilon := by ring
 
+/-- **DAgger-style value gap bound: V^{π_E} - V^{π_L} ≤ H·ε.**
+
+  If the per-step advantage satisfies `advantage(j, s) ≤ ε` for all
+  steps j and states s (a STRONGER condition than behavior cloning's
+  `≤ ε·(j+1)`), then the total value gap is at most H·ε.
+
+  This is the regret bound achieved by DAgger (Ross, Gordon, Bagnell 2011),
+  which trains the learner under its OWN state distribution rather than
+  the expert's. Under the learner's distribution, the advantage at each
+  step is bounded by ε (probability of disagreement × worst-case 1-step
+  cost ≤ ε·1), giving the linear-in-H scaling instead of quadratic.
+
+  Compare with `behavior_cloning_bound` which gives H²·ε under the
+  weaker hypothesis `advantage ≤ ε·(j+1)`. -/
+theorem dagger_bound (I : ImitationSetting)
+    (h_adv : ∀ (j : ℕ) (hj : j + 1 ≤ I.mdp.H) (s : I.mdp.S),
+      I.oneStepAdvantage j hj s ≤ I.epsilon)
+    (s₀ : I.mdp.S) :
+    policyValue I.mdp I.pi_E I.mdp.H le_rfl s₀ -
+    policyValue I.mdp I.pi_L I.mdp.H le_rfl s₀ ≤
+    (I.mdp.H : ℝ) * I.epsilon := by
+  have h_gap := value_gap_le_sum I (fun _ => I.epsilon)
+    (fun _ => I.epsilon_nonneg) h_adv I.mdp.H le_rfl s₀
+  calc policyValue I.mdp I.pi_E I.mdp.H le_rfl s₀ -
+        policyValue I.mdp I.pi_L I.mdp.H le_rfl s₀
+      ≤ ∑ _j ∈ Finset.range I.mdp.H, I.epsilon := h_gap
+    _ = (I.mdp.H : ℝ) * I.epsilon := by
+        rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+
 /-- Legacy wrapper, kept for compatibility. -/
 theorem behavior_cloning_bound_from_pdl
     (V_expert V_learner : Real)
@@ -311,6 +340,67 @@ structure DAggerSetting where
   /-- Number of samples per round -/
   N : Nat
   hN : 0 < N
+
+/-! ### Behavior Cloning: End-to-End Pipeline
+
+  The complete behavior cloning chain:
+
+  1. **Classification error**: Train learner π_L from expert demonstrations.
+     Per-step error: P[π_L(s) ≠ π_E(s)] ≤ ε (supervised learning).
+
+  2. **Advantage bound**: When π_L disagrees (prob ≤ ε), worst-case
+     advantage is at most the remaining horizon j+1. So:
+       advantage(j, s) ≤ ε · (j+1)
+
+  3. **Telescoping** (`value_gap_le_sum`): Sum over H steps:
+       V^E - V^L ≤ ∑_{j<H} ε·(j+1) ≤ ε · H²
+
+  4. **Result** (`behavior_cloning_bound`):
+       V^{π_E}(s₀) - V^{π_L}(s₀) ≤ H² · ε
+-/
+
+/-- **Behavior cloning: classification error → value gap.**
+
+  The end-to-end imitation learning bound: if the learner achieves
+  per-step classification error ε and the advantage from disagreement
+  is bounded by ε · (remaining horizon), then V^E - V^L ≤ H²·ε.
+
+  This wraps `behavior_cloning_bound` with an explicit statement
+  connecting the classification error to the value gap. -/
+theorem behavior_cloning_end_to_end (I : ImitationSetting) (s₀ : I.mdp.S)
+    -- [CONDITIONAL HYPOTHESIS] Per-step advantage bounded by ε·(j+1)
+    -- This follows from: P[disagree] ≤ ε, worst-case cost ≤ j+1
+    (h_adv : ∀ (j : ℕ) (hj : j + 1 ≤ I.mdp.H) (s : I.mdp.S),
+      I.oneStepAdvantage j hj s ≤ I.epsilon * (↑j + 1)) :
+    policyValue I.mdp I.pi_E I.mdp.H le_rfl s₀ -
+    policyValue I.mdp I.pi_L I.mdp.H le_rfl s₀ ≤
+    (I.mdp.H : ℝ) ^ 2 * I.epsilon :=
+  I.behavior_cloning_bound h_adv s₀
+
+/-- **Behavior cloning sample complexity.**
+
+  To achieve V^E - V^L ≤ δ, behavior cloning requires per-step
+  classification error ε ≤ δ / H². Combined with standard supervised
+  learning bounds, this gives n = O(H⁴ / δ²) demonstrations.
+
+  The H⁴ dependence (H² from compounding × H² from inverting ε ≤ δ/H²)
+  motivates DAgger, which achieves n = O(H² / δ²). -/
+theorem behavior_cloning_sample_complexity (I : ImitationSetting) (δ : ℝ)
+    (_hδ : 0 < δ) (hH : 0 < I.mdp.H)
+    (h_eps_small : I.epsilon ≤ δ / (I.mdp.H : ℝ) ^ 2)
+    (h_adv : ∀ (j : ℕ) (hj : j + 1 ≤ I.mdp.H) (s : I.mdp.S),
+      I.oneStepAdvantage j hj s ≤ I.epsilon * (↑j + 1))
+    (s₀ : I.mdp.S) :
+    policyValue I.mdp I.pi_E I.mdp.H le_rfl s₀ -
+    policyValue I.mdp I.pi_L I.mdp.H le_rfl s₀ ≤ δ := by
+  calc policyValue I.mdp I.pi_E I.mdp.H le_rfl s₀ -
+        policyValue I.mdp I.pi_L I.mdp.H le_rfl s₀
+      ≤ (I.mdp.H : ℝ) ^ 2 * I.epsilon := I.behavior_cloning_bound h_adv s₀
+    _ ≤ (I.mdp.H : ℝ) ^ 2 * (δ / (I.mdp.H : ℝ) ^ 2) :=
+        mul_le_mul_of_nonneg_left h_eps_small (sq_nonneg _)
+    _ = δ := by
+        rw [mul_div_cancel₀]
+        exact ne_of_gt (pow_pos (Nat.cast_pos.mpr hH) 2)
 
 end ImitationSetting
 

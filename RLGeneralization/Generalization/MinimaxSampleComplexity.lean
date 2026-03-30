@@ -899,6 +899,166 @@ theorem minimax_rate_scaling :
         have h2 : 2 * M.γ * M.R_max ≤ 2 * M.R_max := by nlinarith
         nlinarith
 
+/-! ### Pointwise Transition Error: Minimax Core with |S| Factor -/
+
+/-- **Minimax deterministic core (pointwise transition error)**.
+
+  Given an approximate MDP M̂ with:
+  - Same rewards: r = r̂
+  - Per-entry transition error: |P(s'|s,a) - P̂(s'|s,a)| ≤ ε_T for all s,a,s'
+  - π̂ dominates π_ref in M̂
+
+  Conclusion:
+    V^{π_ref}(s) - V^{π̂}(s) ≤ 2γ · R_max · |S| · ε_T / (1-γ)²
+
+  The |S| factor arises from converting per-entry error to L1 error:
+    ∑_{s'} |P(s'|s,a) - P̂(s'|s,a)| ≤ |S| · ε_T
+
+  Proved by bounding the L1 transition error and applying
+  `optimality_gap_from_transition_error`. -/
+theorem minimax_deterministic_core_pointwise
+    (M_hat : M.ApproxMDP)
+    (π_ref π_hat : M.StochasticPolicy)
+    -- Value functions in M
+    (V_ref V_hat_M : M.StateValueFn)
+    (hV_ref : M.isValueOf V_ref π_ref)
+    (hV_hat_M : M.isValueOf V_hat_M π_hat)
+    -- Value functions in M̂
+    (V_ref_a V_hat_a : M.StateValueFn)
+    (hV_ref_a : ∀ s, V_ref_a s =
+      (∑ a, π_ref.prob s a * M_hat.r_hat s a) +
+      M.γ * (∑ a, π_ref.prob s a *
+        ∑ s', M_hat.P_hat s a s' * V_ref_a s'))
+    (hV_hat_a : ∀ s, V_hat_a s =
+      (∑ a, π_hat.prob s a * M_hat.r_hat s a) +
+      M.γ * (∑ a, π_hat.prob s a *
+        ∑ s', M_hat.P_hat s a s' * V_hat_a s'))
+    -- π̂ dominates π_ref in M̂
+    (h_opt : ∀ s, V_hat_a s ≥ V_ref_a s)
+    -- Same rewards
+    (h_same_r : ∀ s a, M.r s a = M_hat.r_hat s a)
+    -- Per-entry transition error bound
+    (ε_T : ℝ) (_hε_T_nonneg : 0 ≤ ε_T)
+    (hε_T : ∀ s a s', |M.P s a s' - M_hat.P_hat s a s'| ≤ ε_T) :
+    ∀ s, V_ref s - V_hat_M s ≤
+      2 * M.γ * M.R_max * (↑(Fintype.card M.S) * ε_T) / (1 - M.γ) ^ 2 := by
+  -- Step 1: Bound L1 transition error by |S| · ε_T
+  have h_l1 : M.transitionError M_hat ≤ ↑(Fintype.card M.S) * ε_T := by
+    simp only [transitionError]
+    apply Finset.sup'_le; intro s _
+    apply Finset.sup'_le; intro a _
+    calc ∑ s', |M.P s a s' - M_hat.P_hat s a s'|
+        ≤ ∑ _s' : M.S, ε_T :=
+          Finset.sum_le_sum (fun s' _ => hε_T s a s')
+      _ = Fintype.card M.S * ε_T := by
+          rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+  -- Step 2: Apply the L1 version
+  exact M.optimality_gap_from_transition_error M_hat π_ref π_hat
+    V_ref V_hat_M hV_ref hV_hat_M
+    V_ref_a V_hat_a hV_ref_a hV_hat_a
+    h_opt h_same_r (↑(Fintype.card M.S) * ε_T) h_l1
+
+/-! ### Minimax Rate Scaling: Existential Form -/
+
+/-- **Minimax rate scaling (existential form with transition error)**.
+
+  There exists c > 0 such that for any approximate MDP M̂ with
+  per-entry transition error ≤ ε_T and same rewards:
+
+    V^{π_ref}(s) - V^{π̂}(s) ≤ c · ε_T
+
+  The constant c depends on γ, R_max, and |S|. Concretely,
+  c = 2 · R_max · |S| / (1-γ)² works.
+
+  This establishes the existence of a rate: the optimality gap
+  scales linearly with the per-entry transition error. -/
+theorem minimax_rate_scaling_existence :
+    ∃ (c : ℝ), 0 < c ∧
+    ∀ (ε_T : ℝ), 0 ≤ ε_T →
+    ∀ (M_hat : M.ApproxMDP),
+      (∀ s a s', |M.P s a s' - M_hat.P_hat s a s'| ≤ ε_T) →
+      (∀ s a, M.r s a = M_hat.r_hat s a) →
+    ∀ (π_ref π_hat : M.StochasticPolicy)
+      (V_ref V_hat_M V_ref_a V_hat_a : M.StateValueFn),
+      M.isValueOf V_ref π_ref →
+      M.isValueOf V_hat_M π_hat →
+      (∀ s, V_ref_a s =
+        (∑ a, π_ref.prob s a * M_hat.r_hat s a) +
+        M.γ * (∑ a, π_ref.prob s a *
+          ∑ s', M_hat.P_hat s a s' * V_ref_a s')) →
+      (∀ s, V_hat_a s =
+        (∑ a, π_hat.prob s a * M_hat.r_hat s a) +
+        M.γ * (∑ a, π_hat.prob s a *
+          ∑ s', M_hat.P_hat s a s' * V_hat_a s')) →
+      (∀ s, V_hat_a s ≥ V_ref_a s) →
+    ∀ s, V_ref s - V_hat_M s ≤ c * ε_T := by
+  -- Witness: c = 2 · R_max · |S| / (1-γ)²
+  have h1g : (0 : ℝ) < 1 - M.γ := by linarith [M.γ_lt_one]
+  refine ⟨2 * M.R_max * ↑(Fintype.card M.S) / (1 - M.γ) ^ 2, ?_, ?_⟩
+  · -- c > 0
+    apply div_pos
+    · apply mul_pos
+      · exact mul_pos (by norm_num : (0 : ℝ) < 2) M.R_max_pos
+      · exact Nat.cast_pos.mpr Fintype.card_pos
+    · exact sq_pos_of_pos h1g
+  · intro ε_T hε_T M_hat hε_T_pw h_same_r π_ref π_hat V_ref V_hat_M
+      V_ref_a V_hat_a hV_ref hV_hat_M hV_ref_a hV_hat_a h_opt s
+    -- Apply the pointwise core theorem
+    have h_core := M.minimax_deterministic_core_pointwise M_hat π_ref π_hat
+      V_ref V_hat_M hV_ref hV_hat_M
+      V_ref_a V_hat_a hV_ref_a hV_hat_a
+      h_opt h_same_r ε_T hε_T hε_T_pw s
+    -- h_core : ≤ 2γ·R_max·(|S|·ε_T)/(1-γ)²
+    -- Goal: ≤ (2·R_max·|S|/(1-γ)²) · ε_T
+    -- Since γ ≤ 1, 2γ·R_max·|S|·ε_T/(1-γ)² ≤ 2·R_max·|S|·ε_T/(1-γ)²
+    have hγ_le : M.γ ≤ 1 := le_of_lt M.γ_lt_one
+    have hS : (0 : ℝ) ≤ ↑(Fintype.card M.S) := Nat.cast_nonneg _
+    have hR : 0 < M.R_max := M.R_max_pos
+    have hSε : 0 ≤ ↑(Fintype.card M.S) * ε_T := mul_nonneg hS hε_T
+    calc V_ref s - V_hat_M s
+        ≤ 2 * M.γ * M.R_max * (↑(Fintype.card M.S) * ε_T) / (1 - M.γ) ^ 2 :=
+          h_core
+      _ ≤ 2 * M.R_max * (↑(Fintype.card M.S) * ε_T) / (1 - M.γ) ^ 2 := by
+          apply div_le_div_of_nonneg_right _ (sq_nonneg _)
+          · have : 2 * M.γ ≤ 2 * 1 := by linarith
+            have : 2 * M.γ * M.R_max ≤ 2 * 1 * M.R_max := by
+              exact mul_le_mul_of_nonneg_right this (le_of_lt hR)
+            nlinarith [mul_le_mul_of_nonneg_right this hSε]
+      _ = 2 * M.R_max * ↑(Fintype.card M.S) / (1 - M.γ) ^ 2 * ε_T := by ring
+
+/-! ### Bernstein vs Hoeffding: Exponent Comparison -/
+
+/-- **Bernstein exponent dominates when variance is small**.
+
+  For bounded random variables with |X| ≤ b and Var(X) ≤ σ²,
+  the Bernstein concentration exponent t²/(2(σ² + bt/3)) is at
+  least as large as the exponent t²/(2(b² + bt/3)) obtained by
+  replacing σ² with b². Since smaller variance gives a larger
+  exponent (tighter tail bound), the Bernstein approach
+  improves upon the crude bound whenever σ² < b².
+
+  This is the key algebraic fact underlying the improved
+  1/(1-γ)^{3/2} sample complexity in the Bernstein-based
+  minimax analysis (Azar et al., 2013). -/
+theorem minimax_bernstein_improvement
+    {σ_sq b t : ℝ}
+    (hb : 0 < b) (ht : 0 < t)
+    (hσ_nonneg : 0 ≤ σ_sq) (hσ_le : σ_sq ≤ b ^ 2) :
+    t ^ 2 / (2 * (b ^ 2 + b * t / 3)) ≤
+    t ^ 2 / (2 * (σ_sq + b * t / 3)) := by
+  -- Since σ² ≤ b², we have σ² + bt/3 ≤ b² + bt/3,
+  -- so 1/(σ² + bt/3) ≥ 1/(b² + bt/3),
+  -- so t²/(2(σ² + bt/3)) ≥ t²/(2(b² + bt/3)).
+  have hbt3 : 0 < b * t / 3 := by positivity
+  have h_denom_pos_small : 0 < 2 * (σ_sq + b * t / 3) := by linarith
+  have h_denom_pos_large : 0 < 2 * (b ^ 2 + b * t / 3) := by
+    have : 0 < b ^ 2 := sq_pos_of_pos hb
+    linarith
+  have h_denom_le : 2 * (σ_sq + b * t / 3) ≤ 2 * (b ^ 2 + b * t / 3) := by
+    linarith
+  have ht_sq_nonneg : 0 ≤ t ^ 2 := sq_nonneg _
+  exact div_le_div_of_nonneg_left ht_sq_nonneg h_denom_pos_small h_denom_le
+
 end FiniteMDP
 
 end

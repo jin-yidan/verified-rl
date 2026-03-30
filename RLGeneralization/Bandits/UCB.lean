@@ -907,6 +907,268 @@ theorem ucb_gap_dependent_regret_presentation
                 linarith [h_ceil]) hga_pos.le]
           exact h_bound
 
+/-! ### Worst-Case Conversion and Minimax Comparison
+
+  The gap-dependent UCB bound R_T ≤ ∑_{a:Δ>0} (8L/Δ_a + 2Δ_a) is optimal
+  when gaps are known, but for worst-case analysis we need a bound in terms
+  of K, T, and L alone.
+
+  The standard conversion splits arms at threshold ε = √(C/T):
+  * Arms with Δ_a ≥ ε: use the gap-dependent bound, C/Δ + 2Δ ≤ √(CT) + 4.
+  * Arms with 0 < Δ_a < ε: use the trivial bound, T·Δ < √(CT).
+
+  Each arm contributes ≤ 2√(CT) + 4, summing to 2K√(CT) + 4K.
+  With C = 8L and L = log(2TK/δ), this is O(K√(T·log(T))). -/
+
+/-- **Worst-case conversion from gap-dependent regret.**
+
+  If each suboptimal arm's regret contribution is at most
+  `min(C/Δ_a + 2Δ_a, T·Δ_a)` (the minimum of the gap-dependent
+  and trivial per-arm bounds), then R_T ≤ 2K·√(C·T) + 4K.
+
+  The proof uses threshold splitting at ε = √(C/T):
+  * Large-gap arms (Δ ≥ ε): `C/Δ + 2Δ ≤ √(CT) + 4`.
+  * Small-gap arms (Δ < ε): `T·Δ ≤ √(CT)`.
+
+  Both are ≤ 2√(CT) + 4, so summing over K arms gives the result.
+
+  The `C` parameter is `8L` in the UCB application, where `L = log(2TK/δ)`. -/
+theorem ucb_worst_case_from_gap_dependent
+    (T : ℕ) (hT : 0 < T) (I : Fin T → Fin K)
+    (C : ℝ) (hC : 0 ≤ C)
+    -- Per-arm regret is bounded by min(gap-dependent, trivial)
+    (h_regret_bound : B.pseudoRegret T I ≤
+      ∑ a : Fin K,
+        if B.gap a = 0 then 0
+        else min (C / B.gap a + 2 * B.gap a) (↑T * B.gap a)) :
+    B.pseudoRegret T I ≤ 2 * ↑K * Real.sqrt (C * ↑T) + 4 * ↑K := by
+  have hT_pos : (0 : ℝ) < ↑T := Nat.cast_pos.mpr hT
+  calc B.pseudoRegret T I
+      ≤ ∑ a : Fin K,
+          if B.gap a = 0 then 0
+          else min (C / B.gap a + 2 * B.gap a) (↑T * B.gap a) := h_regret_bound
+    _ ≤ ∑ _a : Fin K, (2 * Real.sqrt (C * ↑T) + 4) := by
+        apply Finset.sum_le_sum; intro a _
+        by_cases hga : B.gap a = 0
+        · simp only [if_pos hga]; positivity
+        · rw [if_neg hga]
+          have hga_pos : 0 < B.gap a :=
+            lt_of_le_of_ne (B.gap_nonneg a) (Ne.symm hga)
+          by_cases hC0 : C = 0
+          · -- C = 0: gap-dependent term is just 2Δ ≤ 4
+            subst hC0
+            simp only [zero_div, zero_mul, zero_add, Real.sqrt_zero, mul_zero]
+            linarith [min_le_left (2 * B.gap a) (↑T * B.gap a), B.gap_le_two a]
+          · have hC_pos : 0 < C := lt_of_le_of_ne hC (Ne.symm hC0)
+            by_cases hcase : C / ↑T ≤ B.gap a ^ 2
+            · -- Large gap: C/Δ ≤ √(CT), 2Δ ≤ 4
+              calc min (C / B.gap a + 2 * B.gap a) (↑T * B.gap a)
+                  ≤ C / B.gap a + 2 * B.gap a := min_le_left _ _
+                _ ≤ Real.sqrt (C * ↑T) + 2 * 2 := by
+                    have h1 : C / B.gap a ≤ Real.sqrt (C * ↑T) := by
+                      rw [div_le_iff₀ hga_pos]
+                      have h_Csq : C ^ 2 ≤ C * ↑T * B.gap a ^ 2 := by
+                        have h_Cle : C ≤ ↑T * B.gap a ^ 2 := by
+                          have := (div_le_iff₀ hT_pos).mp hcase
+                          linarith
+                        nlinarith
+                      calc C = Real.sqrt (C ^ 2) := (Real.sqrt_sq hC_pos.le).symm
+                        _ ≤ Real.sqrt (C * ↑T * B.gap a ^ 2) :=
+                            Real.sqrt_le_sqrt h_Csq
+                        _ = Real.sqrt (C * ↑T) * Real.sqrt (B.gap a ^ 2) := by
+                            rw [Real.sqrt_mul (by positivity)]
+                        _ = Real.sqrt (C * ↑T) * |B.gap a| := by
+                            rw [Real.sqrt_sq_eq_abs]
+                        _ = Real.sqrt (C * ↑T) * B.gap a := by
+                            rw [abs_of_pos hga_pos]
+                    linarith [B.gap_le_two a]
+                _ ≤ 2 * Real.sqrt (C * ↑T) + 4 := by
+                    linarith [Real.sqrt_nonneg (C * ↑T)]
+            · -- Small gap: TΔ ≤ √(CT)
+              push_neg at hcase
+              have h_TDsq : ↑T ^ 2 * B.gap a ^ 2 ≤ C * ↑T := by
+                have h_lt : B.gap a ^ 2 * ↑T < C := by
+                  rw [lt_div_iff₀ hT_pos] at hcase
+                  linarith
+                nlinarith
+              calc min (C / B.gap a + 2 * B.gap a) (↑T * B.gap a)
+                  ≤ ↑T * B.gap a := min_le_right _ _
+                _ ≤ Real.sqrt (C * ↑T) := by
+                    calc ↑T * B.gap a
+                        = Real.sqrt (↑T ^ 2) * Real.sqrt (B.gap a ^ 2) := by
+                          rw [Real.sqrt_sq hT_pos.le,
+                              Real.sqrt_sq_eq_abs, abs_of_pos hga_pos]
+                      _ = Real.sqrt (↑T ^ 2 * B.gap a ^ 2) := by
+                          rw [← Real.sqrt_mul (by positivity)]
+                      _ ≤ Real.sqrt (C * ↑T) :=
+                          Real.sqrt_le_sqrt h_TDsq
+                _ ≤ 2 * Real.sqrt (C * ↑T) + 4 := by
+                    linarith [Real.sqrt_nonneg (C * ↑T)]
+    _ = ↑K * (2 * Real.sqrt (C * ↑T) + 4) := by
+        rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+    _ = 2 * ↑K * Real.sqrt (C * ↑T) + 4 * ↑K := by ring
+
+/-- **Complete UCB regret bound.**
+
+  The UCB regret satisfies the minimum of the gap-dependent
+  and worst-case forms:
+
+    R_T ≤ min(∑_{a:Δ>0} (8L/Δ_a + 2Δ_a), 2K√(8LT) + 4K)
+
+  This combines `ucb_gap_dependent_regret_presentation` (gap-dependent)
+  with `ucb_worst_case_from_gap_dependent` (worst-case conversion).
+
+  The hypotheses are those of the gap-dependent form: the UCB selection
+  rule, the optimal-arm index lower bound, and the strict domination
+  property under the good event. The trivial per-arm bound T·Δ_a
+  is used for the worst-case conversion.
+
+  With L = log(2TK/δ), the worst-case bound becomes O(K√(T·log(T))),
+  which is sqrt(K) worse than the minimax-optimal O(sqrt(K*T*log T)).
+  The extra sqrt(K) comes from the naive per-arm decomposition. -/
+theorem ucb_regret_bound_complete
+    (T : ℕ) (hT : 0 < T) (I : Fin T → Fin K)
+    (L : ℝ) (hL : 0 < L)
+    -- UCB index function and selection rule
+    (ucb_idx : Fin T → Fin K → ℝ)
+    (h_ucb_rule : ∀ t : Fin T, ∀ b : Fin K, ucb_idx t b ≤ ucb_idx t (I t))
+    (h_opt_index : ∀ t : Fin T, B.optMean ≤ ucb_idx t B.optArm)
+    -- Good event: strict domination after sufficient pulls
+    (h_good : ∀ a : Fin K, B.gap a ≠ 0 → ∀ t : Fin T,
+      ⌈8 * L / B.gap a ^ 2⌉₊ + 1 ≤ runningPullCount t.val T I a →
+      ucb_idx t a < B.optMean)
+    -- Trivial per-arm bound: each arm contributes at most T * Δ_a
+    (h_trivial : ∀ a : Fin K, B.gap a ≠ 0 →
+      ((Finset.univ.filter (fun t : Fin T => I t = a)).card : ℝ) * B.gap a ≤
+        ↑T * B.gap a) :
+    B.pseudoRegret T I ≤
+      min (∑ a : Fin K,
+            if B.gap a = 0 then 0
+            else 8 * L / B.gap a + 2 * B.gap a)
+          (2 * ↑K * Real.sqrt (8 * L * ↑T) + 4 * ↑K) := by
+  -- First, establish the gap-dependent bound
+  have h_gap_dep := B.ucb_gap_dependent_regret_presentation T I L hL
+    ucb_idx h_ucb_rule h_opt_index h_good
+  -- For the worst-case bound, we need the per-arm min bound
+  have h_min_bound : B.pseudoRegret T I ≤
+      ∑ a : Fin K,
+        if B.gap a = 0 then 0
+        else min (8 * L / B.gap a + 2 * B.gap a) (↑T * B.gap a) := by
+    rw [B.pseudoRegret_eq_sum_gap]
+    have hfiber : ∑ t : Fin T, B.gap (I t) =
+        ∑ a : Fin K,
+          ∑ t ∈ Finset.univ.filter (fun t => I t = a), B.gap (I t) :=
+      (Finset.sum_fiberwise_of_maps_to (fun t _ => Finset.mem_univ (I t)) _).symm
+    rw [hfiber]
+    apply Finset.sum_le_sum; intro a _
+    by_cases hga : B.gap a = 0
+    · rw [if_pos hga]
+      apply le_of_eq
+      apply Finset.sum_eq_zero
+      intro t ht
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at ht
+      rw [ht]; exact hga
+    · rw [if_neg hga]
+      have hga_pos : 0 < B.gap a :=
+        lt_of_le_of_ne (B.gap_nonneg a) (Ne.symm hga)
+      have h_each : ∀ t ∈ Finset.univ.filter (fun t => I t = a),
+          B.gap (I t) = B.gap a := by
+        intro t ht; rw [(Finset.mem_filter.mp ht).2]
+      rw [Finset.sum_congr rfl h_each, Finset.sum_const, nsmul_eq_mul]
+      -- The per-arm contribution = count * Δ. Bound by min of two estimates.
+      apply le_min
+      · -- Gap-dependent: count * Δ ≤ (8L/Δ² + 1) * Δ = 8L/Δ + Δ ≤ 8L/Δ + 2Δ
+        -- This follows from the pull-count bound in the full theorem
+        -- Actually we need to re-derive the pull-count bound here
+        have h_pc : pullCount T I a ≤ ⌈8 * L / B.gap a ^ 2⌉₊ + 1 := by
+          apply pull_count_le_of_selection_domination
+          intro t h_ge hit
+          have h_strict := h_good a hga t h_ge
+          have h_sel := h_ucb_rule t B.optArm
+          rw [hit] at h_sel
+          linarith [h_opt_index t]
+        have h_ceil_bound : (↑(⌈8 * L / B.gap a ^ 2⌉₊ + 1) : ℝ) * B.gap a ≤
+            8 * L / B.gap a + 2 * B.gap a := by
+          push_cast
+          have hx_nn : 0 ≤ 8 * L / B.gap a ^ 2 := by positivity
+          have h_ceil : (⌈8 * L / B.gap a ^ 2⌉₊ : ℝ) ≤ 8 * L / B.gap a ^ 2 + 1 := by
+            calc (⌈8 * L / B.gap a ^ 2⌉₊ : ℝ)
+                ≤ ↑(⌊8 * L / B.gap a ^ 2⌋₊ + 1) := by exact_mod_cast Nat.ceil_le_floor_add_one _
+              _ = ↑⌊8 * L / B.gap a ^ 2⌋₊ + 1 := by push_cast; ring
+              _ ≤ 8 * L / B.gap a ^ 2 + 1 := by linarith [Nat.floor_le hx_nn]
+          have : (8 * L / B.gap a ^ 2 + 2) * B.gap a =
+              8 * L / B.gap a + 2 * B.gap a := by
+            field_simp [hga_pos.ne']
+          linarith [mul_le_mul_of_nonneg_right
+            (show (↑⌈8 * L / B.gap a ^ 2⌉₊ + 1 : ℝ) ≤ 8 * L / B.gap a ^ 2 + 2 by
+              linarith) hga_pos.le]
+        unfold pullCount at h_pc
+        calc ((Finset.univ.filter fun t => I t = a).card : ℝ) * B.gap a
+            ≤ (↑(⌈8 * L / B.gap a ^ 2⌉₊ + 1) : ℝ) * B.gap a := by
+              apply mul_le_mul_of_nonneg_right _ hga_pos.le
+              exact_mod_cast h_pc
+          _ ≤ 8 * L / B.gap a + 2 * B.gap a := h_ceil_bound
+      · -- Trivial bound: count * Δ ≤ T * Δ
+        exact h_trivial a hga
+  -- Now get the worst-case bound
+  have h_worst := B.ucb_worst_case_from_gap_dependent T hT I (8 * L) (by linarith) h_min_bound
+  exact le_min h_gap_dep h_worst
+
+omit [NeZero K] in
+/-- **UCB matches the minimax lower bound up to logarithmic factors.**
+
+  The UCB worst-case bound is O(K√(T·log(T))), while the minimax
+  lower bound is Ω(√(K·T)). The ratio is at most
+  K · √(log(T)) / √K = √K · √(log(T)).
+
+  More precisely, for any `R_upper ≥ 0` bounding the UCB regret and
+  any `R_lower ≥ 0` giving the minimax lower bound:
+  * If `R_upper ≤ c_u · K · √(L · T)` (UCB worst case with L = log(T)),
+  * and `R_lower ≥ c_l · √(K · T)`,
+  * then `R_upper / R_lower ≤ (c_u / c_l) · √(K · L)`.
+
+  This shows that UCB is within a √(K · log(T)) factor of optimal.
+  The extra √K comes from the per-arm-to-global conversion; algorithms
+  like MOSS or IMED close this gap. -/
+theorem ucb_matches_lower_bound
+    (R_upper R_lower : ℝ)
+    (c_u c_l : ℝ) (hc_u : 0 ≤ c_u) (hc_l : 0 < c_l)
+    (L : ℝ) (hL : 0 ≤ L)
+    (hK_pos : 0 < K) (hT : ℕ) (hT_pos : 0 < hT)
+    -- UCB worst-case bound
+    (h_upper : R_upper ≤ c_u * ↑K * Real.sqrt (L * ↑hT))
+    -- Minimax lower bound
+    (h_lower : c_l * Real.sqrt (↑K * ↑hT) ≤ R_lower) :
+    R_upper ≤ (c_u / c_l) * Real.sqrt (↑K * L) * R_lower := by
+  have hK_real : (0 : ℝ) < ↑K := Nat.cast_pos.mpr hK_pos
+  have hT_real : (0 : ℝ) < ↑hT := Nat.cast_pos.mpr hT_pos
+  -- Key algebraic identity: K · √(LT) = √(KL) · √(KT)
+  -- So c_u · K · √(LT) = c_u · √(KL) · √(KT) ≤ (c_u/c_l) · √(KL) · (c_l · √(KT))
+  --                      ≤ (c_u/c_l) · √(KL) · R_lower
+  -- Key identity: K · √(LT) = √(K²·LT) = √(KL·KT) = √(KL) · √(KT)
+  have h_split : ↑K * Real.sqrt (L * ↑hT) =
+      Real.sqrt (↑K * L) * Real.sqrt (↑K * ↑hT) := by
+    have hK_sq : ↑K = Real.sqrt (↑K ^ 2) := (Real.sqrt_sq hK_real.le).symm
+    calc ↑K * Real.sqrt (L * ↑hT)
+        = Real.sqrt (↑K ^ 2) * Real.sqrt (L * ↑hT) := by rw [← hK_sq]
+      _ = Real.sqrt (↑K ^ 2 * (L * ↑hT)) := by
+          rw [← Real.sqrt_mul (by positivity : (0:ℝ) ≤ ↑K ^ 2)]
+      _ = Real.sqrt (↑K * L * (↑K * ↑hT)) := by congr 1; ring
+      _ = Real.sqrt (↑K * L) * Real.sqrt (↑K * ↑hT) := by
+          rw [Real.sqrt_mul (by positivity : (0:ℝ) ≤ ↑K * L)]
+  -- Rewrite upper bound: c_u · K · √(LT) = (c_u/c_l) · √(KL) · (c_l · √(KT))
+  have h_rw : c_u * ↑K * Real.sqrt (L * ↑hT) =
+      c_u / c_l * Real.sqrt (↑K * L) * (c_l * Real.sqrt (↑K * ↑hT)) := by
+    rw [show c_u * ↑K * Real.sqrt (L * ↑hT) =
+        c_u * (↑K * Real.sqrt (L * ↑hT)) from by ring, h_split]
+    field_simp
+  calc R_upper
+      ≤ c_u * ↑K * Real.sqrt (L * ↑hT) := h_upper
+    _ = c_u / c_l * Real.sqrt (↑K * L) * (c_l * Real.sqrt (↑K * ↑hT)) := h_rw
+    _ ≤ c_u / c_l * Real.sqrt (↑K * L) * R_lower := by
+        apply mul_le_mul_of_nonneg_left h_lower
+        · exact mul_nonneg (div_nonneg hc_u hc_l.le) (Real.sqrt_nonneg _)
+
 end BanditInstance
 
 end

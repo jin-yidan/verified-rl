@@ -366,10 +366,190 @@ class DeepSeekProver:
 Provide ONLY the tactic proof (the part after `:= by`), no explanations."""
 
 
+class _OpenAICompatibleProver:
+    """Base class for provers that use an OpenAI-compatible chat API.
+
+    Subclasses set ``name``, ``_api_key_env``, ``_api_url_env``,
+    ``_default_url``, and ``_model``.
+    """
+    name: str = ""
+    _api_key_env: str = ""
+    _api_url_env: str = ""
+    _default_url: str = ""
+    _model: str = ""
+
+    def __init__(self):
+        self.api_key = os.environ.get(self._api_key_env, "")
+        self.api_url = os.environ.get(self._api_url_env, self._default_url)
+        if not self.api_key:
+            print(f"WARNING: {self._api_key_env} not set, using dry-run mode",
+                  file=sys.stderr)
+
+    def attempt(self, problem: dict, lean_code: str) -> dict:
+        if not self.api_key:
+            return {
+                "success": False,
+                "tactic": None,
+                "time_seconds": 0.0,
+                "error": f"{self._api_key_env} not set",
+            }
+
+        prompt = self._build_prompt(problem, lean_code)
+        start = time.time()
+        try:
+            import httpx
+            response = httpx.post(
+                self.api_url,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self._model,
+                    "messages": [
+                        {"role": "system", "content": (
+                            "You are a Lean 4 theorem prover. Given a theorem "
+                            "statement, produce a correct tactic proof. Output "
+                            "ONLY the tactic block (no markdown, no explanation)."
+                        )},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "temperature": 0.0,
+                    "max_tokens": 2048,
+                },
+                timeout=API_REQUEST_TIMEOUT,
+            )
+            elapsed = time.time() - start
+            data = response.json()
+            try:
+                tactic = data["choices"][0]["message"]["content"].strip()
+            except (KeyError, IndexError, TypeError):
+                return {
+                    "success": False,
+                    "tactic": None,
+                    "time_seconds": elapsed,
+                    "error": f"unexpected API response structure: {str(data)[:500]}",
+                }
+
+            # Strip markdown code fences if present
+            if tactic.startswith("```"):
+                tactic = "\n".join(tactic.split("\n")[1:])
+            if tactic.endswith("```"):
+                tactic = "\n".join(tactic.split("\n")[:-1])
+            tactic = tactic.strip()
+
+            # Indent tactic block for Lean
+            tactic_indented = "\n".join(
+                "  " + line if line.strip() else ""
+                for line in tactic.splitlines()
+            )
+
+            # Verify the proof by running Lean
+            gen_time = elapsed
+            verified, verify_error = verify_lean_proof(
+                problem, tactic_indented, timeout_sec=LEAN_VERIFY_TIMEOUT)
+            total_time = time.time() - start
+
+            return {
+                "success": verified,
+                "tactic": tactic,
+                "time_seconds": total_time,
+                "generation_time": gen_time,
+                "error": verify_error if not verified else None,
+            }
+
+        except Exception as e:
+            error_msg = str(e)
+            if self.api_key and self.api_key in error_msg:
+                error_msg = error_msg.replace(self.api_key, "<REDACTED>")
+            return {
+                "success": False,
+                "tactic": None,
+                "time_seconds": time.time() - start,
+                "error": error_msg,
+            }
+
+    def _build_prompt(self, problem: dict, lean_code: str) -> str:
+        desc = problem.get("informal_description", "")
+        stmt = problem["statement"]
+        return f"""Prove the following Lean 4 theorem.
+
+{f'Description: {desc}' if desc else ''}
+
+```lean4
+{stmt} := by
+  sorry  -- replace this with your proof
+```
+
+Provide ONLY the tactic proof (the part after `:= by`), no explanations."""
+
+
+class DeepSeekV2Prover(_OpenAICompatibleProver):
+    """Updated DeepSeek-Prover-V2 with model name deepseek-prover-v2-671b.
+
+    Uses the same API as the original DeepSeekProver but with an explicit
+    model identifier for the V2-671B variant.
+
+    Requires DEEPSEEK_API_KEY environment variable.
+    """
+    name = "deepseek_prover_v2"
+    _api_key_env = "DEEPSEEK_API_KEY"
+    _api_url_env = "DEEPSEEK_API_URL"
+    _default_url = "https://api.deepseek.com/chat/completions"
+    _model = "deepseek-prover-v2-671b"
+
+
+class KiminaProver(_OpenAICompatibleProver):
+    """Interface to Kimina-Prover via OpenAI-compatible endpoint.
+
+    Kimina-Prover is a formal-mathematics LLM specializing in Lean 4 proofs.
+
+    Requires KIMINA_API_KEY and optionally KIMINA_API_URL environment variables.
+    """
+    name = "kimina"
+    _api_key_env = "KIMINA_API_KEY"
+    _api_url_env = "KIMINA_API_URL"
+    _default_url = "https://api.kimina.ai/v1/chat/completions"
+    _model = "kimina-prover-preview"
+
+
+class GoedelProver(_OpenAICompatibleProver):
+    """Interface to Goedel-Prover-V2 via OpenAI-compatible endpoint.
+
+    Goedel-Prover-V2 is trained on large-scale formal math corpora and
+    excels at structured mathematical reasoning.
+
+    Requires GOEDEL_API_KEY and optionally GOEDEL_API_URL environment variables.
+    """
+    name = "goedel"
+    _api_key_env = "GOEDEL_API_KEY"
+    _api_url_env = "GOEDEL_API_URL"
+    _default_url = "https://api.goedel-prover.org/v1/chat/completions"
+    _model = "goedel-prover-v2"
+
+
+class LeanstralProver(_OpenAICompatibleProver):
+    """Interface to Mistral's Leanstral model.
+
+    Leanstral is Mistral's fine-tuned model for Lean 4 theorem proving.
+
+    Requires LEANSTRAL_API_KEY and optionally LEANSTRAL_API_URL environment variables.
+    """
+    name = "leanstral"
+    _api_key_env = "LEANSTRAL_API_KEY"
+    _api_url_env = "LEANSTRAL_API_URL"
+    _default_url = "https://api.mistral.ai/v1/chat/completions"
+    _model = "leanstral-v1"
+
+
 PROVERS = {
     "dummy": DummyProver,
     "ground_truth": LeanCheckProver,
     "deepseek": DeepSeekProver,
+    "deepseek_v2": DeepSeekV2Prover,
+    "kimina": KiminaProver,
+    "goedel": GoedelProver,
+    "leanstral": LeanstralProver,
 }
 
 

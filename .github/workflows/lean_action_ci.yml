@@ -21,6 +21,7 @@ jobs:
         uses: leanprover/lean-action@v1
         with:
           use-mathlib-cache: true
+          lean4checker: true
       - name: Prepare SLT Dependency
         run: |
           lake update SLT
@@ -28,7 +29,7 @@ jobs:
       - name: Build Trusted Target
         run: lake build --wfail RLGeneralization
       - name: Build Draft Target
-        run: lake build RLGeneralization.Draft
+        run: lake build --wfail RLGeneralization.Draft
       - name: Check Manifest Consistency
         run: bash scripts/check_manifest_consistency.sh
       - name: Check Verified Target

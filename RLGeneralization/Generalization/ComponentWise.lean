@@ -26,6 +26,7 @@ tighter because it uses the resolvent's sign-preserving property.
 -/
 
 import RLGeneralization.MDP.Resolvent
+import RLGeneralization.MDP.BanachFixedPoint
 
 open Finset BigOperators
 
@@ -373,6 +374,73 @@ theorem optimal_value_comparison (M_hat : M.ApproxMDP)
     exact M.optimal_value_gap_upper_bound M_hat π_M V_star_M V_Mhat_piM
       V_star_Mhat hV_star_M hV_Mhat_piM h_same_r
       h_opt_Mhat ε_trans h_upper s
+
+/-! ### Value Function Existence in Approximate Models
+
+  The `hV_Mhat` hypothesis in the theorems above can be discharged
+  using Banach's fixed point theorem, provided the approximate model's
+  rewards are bounded.
+
+  The construction is:
+  1. Lift M̂ to a full `FiniteMDP` via `approxMDP_to_FiniteMDP`
+  2. Apply `actionValueFixedPoint_isActionValueOf` to get Q̂
+  3. Define V̂(s) = ∑_a π(a|s) Q̂(s,a)
+  4. The Bellman equation for Q̂ implies V̂ satisfies `hV_Mhat`
+
+  This makes the ComponentWise bounds fully self-contained modulo
+  the bounded-reward assumption on M̂. -/
+
+/-- **Existence of Bellman-consistent value functions in approximate models.**
+
+  For any approximate MDP M̂ with bounded rewards and any stochastic
+  policy π, there exists a value function V_Mhat satisfying the
+  Bellman evaluation equation in M̂:
+
+    V(s) = ∑_a π(a|s)·r̂(s,a) + γ·∑_a π(a|s)·∑_{s'} P̂(s'|s,a)·V(s')
+
+  This discharges the `hV_Mhat` hypothesis in `value_gap_upper_bound`
+  and related theorems. -/
+theorem approxMDP_value_exists (M_hat : M.ApproxMDP)
+    (h_r_bnd : ∃ R_max : ℝ, 0 < R_max ∧
+      ∀ s a, |M_hat.r_hat s a| ≤ R_max)
+    (π : M.StochasticPolicy) :
+    ∃ V_Mhat : M.StateValueFn,
+      ∀ s, V_Mhat s =
+        (∑ a, π.prob s a * M_hat.r_hat s a) +
+        M.γ * (∑ a, π.prob s a *
+          ∑ s', M_hat.P_hat s a s' * V_Mhat s') := by
+  -- Lift the approximate model to a full FiniteMDP
+  let Mh : FiniteMDP := M.approxMDP_to_FiniteMDP M_hat h_r_bnd
+  -- Transport π to the lifted model's policy type
+  let pi_h : Mh.StochasticPolicy :=
+    ⟨π.prob, π.prob_nonneg, π.prob_sum_one⟩
+  -- Get the Banach fixed-point action-value function
+  let Qh := Mh.actionValueFixedPoint pi_h
+  have hQ : Mh.isActionValueOf Qh pi_h :=
+    Mh.actionValueFixedPoint_isActionValueOf pi_h
+  -- Define V(s) = ∑_a π(a|s) Q(s,a) as a named let
+  let Vh : M.StateValueFn := fun s => ∑ a, π.prob s a * Qh s a
+  -- Use Vh as the witness
+  refine ⟨Vh, fun s => ?_⟩
+  -- Bellman eq for Q: Q(s,a) = r̂(s,a) + γ·∑ P̂·Vh
+  have hQ_eq : ∀ a, Qh s a = M_hat.r_hat s a +
+      M.γ * ∑ s', M_hat.P_hat s a s' * Vh s' := fun a => hQ s a
+  -- Vh(s) = ∑ π·Q = ∑ π·(r̂ + γ·∑P̂·Vh) = ∑ π·r̂ + γ·∑ π·∑P̂·Vh
+  change Vh s = _
+  -- Goal: ∑ π·Q = ∑ π·r̂ + γ·∑ π·∑P̂·Vh
+  change ∑ a, π.prob s a * Qh s a =
+    (∑ a, π.prob s a * M_hat.r_hat s a) +
+    M.γ * (∑ a, π.prob s a * ∑ s', M_hat.P_hat s a s' * Vh s')
+  calc ∑ a, π.prob s a * Qh s a
+      = ∑ a, (π.prob s a * M_hat.r_hat s a +
+          M.γ * (π.prob s a * ∑ s', M_hat.P_hat s a s' * Vh s')) :=
+        Finset.sum_congr rfl (fun a _ => by rw [hQ_eq a]; ring)
+    _ = (∑ a, π.prob s a * M_hat.r_hat s a) +
+        ∑ a, M.γ * (π.prob s a * ∑ s', M_hat.P_hat s a s' * Vh s') :=
+        Finset.sum_add_distrib
+    _ = (∑ a, π.prob s a * M_hat.r_hat s a) +
+        M.γ * ∑ a, π.prob s a * ∑ s', M_hat.P_hat s a s' * Vh s' := by
+        congr 1; rw [← Finset.mul_sum]
 
 end FiniteMDP
 

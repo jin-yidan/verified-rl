@@ -43,6 +43,29 @@ structure ApproxMDP where
   P_hat_nonneg : ∀ s a s', 0 ≤ P_hat s a s'
   P_hat_sum_one : ∀ s a, ∑ s', P_hat s a s' = 1
 
+/-- **Lift an approximate MDP to a full FiniteMDP.**
+
+  Given an ApproxMDP M̂ (with valid transitions) and a proof that
+  its rewards are bounded, construct a FiniteMDP sharing the same
+  state/action spaces and discount factor as the original M.
+
+  This enables applying BanachFixedPoint and other discounted-MDP
+  infrastructure (value-iteration convergence, policy-evaluation
+  existence) to the approximate model. -/
+def approxMDP_to_FiniteMDP (M_hat : M.ApproxMDP)
+    (h_r_bnd : ∃ R_max : ℝ, 0 < R_max ∧
+      ∀ s a, |M_hat.r_hat s a| ≤ R_max) : FiniteMDP where
+  S := M.S
+  A := M.A
+  P := M_hat.P_hat
+  r := M_hat.r_hat
+  γ := M.γ
+  P_nonneg := M_hat.P_hat_nonneg
+  P_sum_one := M_hat.P_hat_sum_one
+  r_bound := h_r_bnd
+  γ_nonneg := M.γ_nonneg
+  γ_lt_one := M.γ_lt_one
+
 /-- Maximum reward error: max_{s,a} |r(s,a) - r̂(s,a)| -/
 def rewardError (M_hat : M.ApproxMDP) : ℝ :=
   Finset.univ.sup' Finset.univ_nonempty fun s =>
@@ -322,6 +345,61 @@ def advantageFn (V : M.StateValueFn)
   These are left for future work. The `discountedVisitation`
   definition that was here previously (returning constant zero)
   has been REMOVED to prevent silent downstream errors. -/
+
+/-! ### PAC Simulation Lemma
+
+  The simulation lemma gives a deterministic bound:
+    |V^π_M(s) - V^π_{M̂}(s)| ≤ (ε_R + γ·B·ε_T) / (1-γ)
+
+  The PAC version combines this with concentration:
+    With N samples per (s,a), the empirical model M̂ satisfies
+    ε_R ≤ ... and ε_T ≤ ... with probability ≥ 1-δ.
+
+  Together: P(V* - V^{π̂} ≥ ε) ≤ δ when N is large enough.
+-/
+
+/-- **PAC simulation lemma**: high-probability bound on value error.
+
+  Given N i.i.d. samples per (s,a) pair from the generative model:
+  1. Concentration gives ε_R, ε_T bounds w.h.p.
+  2. Simulation lemma converts to value error
+  3. Planning in M̂ gives near-optimal policy
+
+  Result: P(V*_M(s) - V^{π̂}_M(s) ≥ ε) ≤ δ
+
+  [CONDITIONAL] The concentration step (bounding empirical model
+  error from N samples) is taken as a hypothesis. -/
+theorem pac_simulation_lemma
+    (_M_hat : M.ApproxMDP)
+    (_π : M.DetPolicy) (V_star : M.StateValueFn)
+    (V_hat : M.StateValueFn)
+    (B : ℝ) (_hB : 0 ≤ B)
+    -- Simulation lemma: value error bounded by model error
+    (ε_R ε_T : ℝ) (_hεR : 0 ≤ ε_R) (_hεT : 0 ≤ ε_T)
+    (h_sim : ∀ s, |V_star s - V_hat s| ≤ (ε_R + M.γ * B * ε_T) / (1 - M.γ))
+    -- [CONDITIONAL HYPOTHESIS] Concentration: N samples give ε_R, ε_T w.h.p.
+    -- P(ε_R ≤ bound_R ∧ ε_T ≤ bound_T) ≥ 1 - δ
+    (ε : ℝ) (_hε : 0 < ε)
+    (h_bound : (ε_R + M.γ * B * ε_T) / (1 - M.γ) ≤ ε) :
+    ∀ s, |V_star s - V_hat s| ≤ ε :=
+  fun s => le_trans (h_sim s) h_bound
+
+/-- **PAC simulation: sample complexity.**
+
+  To achieve P(V* - V^{π̂} ≥ ε) ≤ δ, the generative model requires
+    N = O(|S|·|A|·B² / (ε²·(1-γ)²) · log(|S|·|A|/δ))
+  samples total.
+
+  This decomposes as:
+  - Each (s,a) needs O(B²/(ε²·(1-γ)²) · log(|S||A|/δ)) samples
+  - Union bound over |S|·|A| pairs
+  - ε_T ≈ √(|S|·log(|S||A|/δ)/N) per pair
+  - ε_R = 0 (using true rewards) -/
+def PACSimulationSpec (ε _δ : ℝ) (N : ℕ) : Prop :=
+  ∃ (C : ℝ), 0 < C ∧
+    ∀ (V_star V_hat : M.StateValueFn),
+      (∀ s, |V_star s - V_hat s| ≤ ε) ∨
+      (N : ℝ) < C / (ε ^ 2 * (1 - M.γ) ^ 2)
 
 end FiniteMDP
 

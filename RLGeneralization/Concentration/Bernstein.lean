@@ -519,4 +519,160 @@ theorem bernstein_sum
             linarith
           field_simp; ring
 
+/-! ### Two-Sided Bernstein Inequality
+
+  Boucheron et al., Corollary 2.11: For independent zero-mean r.v.s
+  with |X_i| ≤ b and ∑E[X_i²] ≤ V:
+
+    P(|S| ≥ t) ≤ 2·exp(-t²/(2(V + bt/3)))
+
+  This follows from the one-sided bound applied to both S and -S. -/
+
+/-- **Two-sided Bernstein inequality** (Boucheron et al. Corollary 2.11).
+
+  For independent zero-mean bounded random variables X₁,...,X_N with
+  |X_i| ≤ b a.s. and ∑ E[X_i²] ≤ V:
+
+    P(|∑ X_i| ≥ t) ≤ 2·exp(-t²/(2V + 2bt/3))
+
+  Proof: apply the one-sided `bernstein_sum` to both S and -S. -/
+theorem bernstein_two_sided
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {X : ℕ → Ω → ℝ} {N : ℕ} (hN : 0 < N)
+    (hX_meas : ∀ i, Measurable (X i))
+    (h_indep : iIndepFun X μ)
+    {b : ℝ} (hb : 0 < b)
+    (h_bound : ∀ i, ∀ᵐ ω ∂μ, |X i ω| ≤ b)
+    (h_mean : ∀ i, ∫ ω, X i ω ∂μ = 0)
+    {V : ℝ} (hV : 0 ≤ V)
+    (h_var_sum : ∑ i ∈ range N, ∫ ω, (X i ω) ^ 2 ∂μ ≤ V)
+    {t : ℝ} (ht : 0 < t) :
+    μ.real {ω | t ≤ |∑ i ∈ range N, X i ω|} ≤
+      2 * exp (-t ^ 2 / (2 * V + 2 * b * t / 3)) := by
+  -- Upper tail: P(S ≥ t) ≤ exp(...)
+  have h_upper := bernstein_sum hN hX_meas h_indep hb h_bound h_mean hV h_var_sum ht
+  -- -X_i: independent, zero-mean, bounded, same variance
+  have h_neg_meas : ∀ i, Measurable (fun ω => -X i ω) := fun i => (hX_meas i).neg
+  have h_neg_indep : iIndepFun (fun i ω => -X i ω) μ := by
+    simpa using h_indep.comp
+      (g := fun (_ : ℕ) (x : ℝ) => -x)
+      (fun _ => measurable_neg)
+  have h_neg_bound : ∀ i, ∀ᵐ ω ∂μ, |(fun ω => -X i ω) ω| ≤ b := by
+    intro i; filter_upwards [h_bound i] with ω hω; simp [abs_neg, hω]
+  have h_neg_mean : ∀ i, ∫ ω, (fun ω => -X i ω) ω ∂μ = 0 := by
+    intro i; simp [integral_neg, h_mean i]
+  have h_neg_var : ∑ i ∈ range N, ∫ ω, ((fun ω => -X i ω) ω) ^ 2 ∂μ ≤ V := by
+    simp only [neg_sq]; exact h_var_sum
+  -- Lower tail: P(∑(-X_i) ≥ t) ≤ exp(...)
+  have h_lower := bernstein_sum hN h_neg_meas h_neg_indep hb
+    h_neg_bound h_neg_mean hV h_neg_var ht
+  -- {|S| ≥ t} ⊆ {S ≥ t} ∪ {∑(-X_i) ≥ t}
+  have h_subset : {ω | t ≤ |∑ i ∈ range N, X i ω|} ⊆
+      {ω | t ≤ ∑ i ∈ range N, X i ω} ∪
+      {ω | t ≤ ∑ i ∈ range N, (fun ω => -X i ω) ω} := by
+    intro ω hω
+    simp only [Set.mem_union, Set.mem_setOf_eq, Finset.sum_neg_distrib]
+    simp only [Set.mem_setOf_eq] at hω
+    cases le_abs.mp hω with
+    | inl h => exact Or.inl h
+    | inr h => exact Or.inr (by linarith)
+  -- Combine via union bound
+  calc μ.real {ω | t ≤ |∑ i ∈ range N, X i ω|}
+      ≤ μ.real ({ω | t ≤ ∑ i ∈ range N, X i ω} ∪
+          {ω | t ≤ ∑ i ∈ range N, (fun ω => -X i ω) ω}) :=
+        measureReal_mono h_subset
+    _ ≤ μ.real {ω | t ≤ ∑ i ∈ range N, X i ω} +
+        μ.real {ω | t ≤ ∑ i ∈ range N, (fun ω => -X i ω) ω} :=
+        measureReal_union_le _ _
+    _ ≤ exp (-t ^ 2 / (2 * V + 2 * b * t / 3)) +
+        exp (-t ^ 2 / (2 * V + 2 * b * t / 3)) :=
+        add_le_add h_upper h_lower
+    _ = 2 * exp (-t ^ 2 / (2 * V + 2 * b * t / 3)) := by ring
+
+/-! ### Chebyshev-Cantelli Inequality (One-Sided Chebyshev)
+
+  Boucheron et al., Exercise 2.3. For any random variable Y with
+  E[Y] = 0 and E[Y²] ≤ σ², and for any t > 0:
+
+    P(Y ≥ t) ≤ σ² / (σ² + t²)
+
+  **Proof**: For any u > 0, P(Y ≥ t) = P(Y+u ≥ t+u) ≤ P((Y+u)² ≥ (t+u)²)
+  ≤ E[(Y+u)²]/(t+u)² by Markov. Since E[Y]=0, E[(Y+u)²] = E[Y²]+u².
+  The bound (E[Y²]+u²)/(t+u)² is minimized at u = E[Y²]/t, giving
+  E[Y²]/(E[Y²]+t²). We prove the pre-optimized version.
+
+  Unlike Hoeffding/Bernstein, this requires NO independence or boundedness,
+  only finite second moment. -/
+
+/-- **Chebyshev-Cantelli (pre-optimized)**.
+
+  For Y with E[Y]=0 and E[Y²] ≤ σ², and any shift u > 0:
+
+    P(Y ≥ t) ≤ (σ² + u²) / (t + u)²
+
+  This yields the Chebyshev-Cantelli bound σ²/(σ²+t²) at u = σ²/t. -/
+theorem chebyshev_cantelli_aux
+    {Ω : Type*} [MeasurableSpace Ω]
+    {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {Y : Ω → ℝ}
+    (hY_int : Integrable Y μ)
+    (hY_sq_int : Integrable (fun ω => (Y ω) ^ 2) μ)
+    (h_mean : ∫ ω, Y ω ∂μ = 0)
+    {sigma_sq : ℝ} (_hsigma : 0 ≤ sigma_sq)
+    (h_var : ∫ ω, (Y ω) ^ 2 ∂μ ≤ sigma_sq)
+    {t : ℝ} (ht : 0 < t) {u : ℝ} (hu : 0 < u) :
+    μ.real {ω | t ≤ Y ω} ≤ (sigma_sq + u ^ 2) / (t + u) ^ 2 := by
+  have htu : 0 < t + u := by linarith
+  -- {Y ≥ t} ⊆ {(Y+u)² ≥ (t+u)²}
+  have h_subset : {ω | t ≤ Y ω} ⊆ {ω | (t + u) ^ 2 ≤ (Y ω + u) ^ 2} := by
+    intro ω hω
+    simp only [Set.mem_setOf_eq] at hω ⊢
+    nlinarith [sq_nonneg (Y ω + u - (t + u))]
+  -- E[(Y+u)²] = E[Y²] + u²  (since E[Y]=0)
+  have h_shift_int : Integrable (fun ω => (Y ω + u) ^ 2) μ := by
+    have : (fun ω => (Y ω + u) ^ 2) = fun ω => (Y ω) ^ 2 + 2 * u * Y ω + u ^ 2 := by
+      ext ω; ring
+    rw [this]; exact (hY_sq_int.add (hY_int.const_mul _)).add (integrable_const _)
+  have h_E_shift : ∫ ω, (Y ω + u) ^ 2 ∂μ = (∫ ω, (Y ω) ^ 2 ∂μ) + u ^ 2 := by
+    -- E[(Y+u)²] = E[Y² + 2uY + u²] = E[Y²] + 2u·E[Y] + u² = E[Y²] + u²
+    calc ∫ ω, (Y ω + u) ^ 2 ∂μ
+        = ∫ ω, ((Y ω) ^ 2 + (2 * u * Y ω + u ^ 2)) ∂μ := by
+          congr 1; ext ω; ring
+      _ = (∫ ω, (Y ω) ^ 2 ∂μ) + ∫ ω, (2 * u * Y ω + u ^ 2) ∂μ := by
+          exact integral_add hY_sq_int ((hY_int.const_mul _).add (integrable_const _))
+      _ = (∫ ω, (Y ω) ^ 2 ∂μ) + (2 * u * (∫ ω, Y ω ∂μ) + u ^ 2) := by
+          congr 1
+          calc ∫ ω, (2 * u * Y ω + u ^ 2) ∂μ
+              = (∫ ω, (2 * u) * Y ω ∂μ) + ∫ _, u ^ 2 ∂μ :=
+                integral_add (hY_int.const_mul _) (integrable_const _)
+            _ = 2 * u * (∫ ω, Y ω ∂μ) + u ^ 2 := by
+                rw [integral_const_mul, integral_const, smul_eq_mul]
+                simp [probReal_univ]
+      _ = (∫ ω, (Y ω) ^ 2 ∂μ) + u ^ 2 := by rw [h_mean, mul_zero, zero_add]
+  -- E[(Y+u)²] ≤ σ² + u²
+  have h_E_le : ∫ ω, (Y ω + u) ^ 2 ∂μ ≤ sigma_sq + u ^ 2 := by
+    rw [h_E_shift]; linarith
+  -- Markov: P((Y+u)² ≥ c) ≤ E[(Y+u)²]/c  for c > 0
+  -- We use: P(Z ≥ c) ≤ E[Z]/c for nonneg Z
+  -- Chain: P(Y≥t) ≤ P((Y+u)²≥(t+u)²) ≤ E[(Y+u)²]/(t+u)² ≤ (σ²+u²)/(t+u)²
+  have h_sq_nonneg : 0 ≤ᵐ[μ] fun ω => (Y ω + u) ^ 2 :=
+    ae_of_all μ fun ω => sq_nonneg _
+  have h_c_pos : (0 : ℝ) < (t + u) ^ 2 := by positivity
+  calc μ.real {ω | t ≤ Y ω}
+      ≤ μ.real {ω | (t + u) ^ 2 ≤ (Y ω + u) ^ 2} :=
+        measureReal_mono h_subset
+    _ ≤ (∫ ω, (Y ω + u) ^ 2 ∂μ) / (t + u) ^ 2 := by
+        -- Markov: ε · μ{f ≥ ε} ≤ ∫f for nonneg f
+        -- mul_meas_ge_le_integral_of_nonneg : 0 ≤ᵐ f → Integrable f → 0 ≤ ε →
+        --   ε * (μ {ω | ε ≤ f ω}).toReal ≤ ∫ f
+        -- Markov: ε * μ.real{f ≥ ε} ≤ ∫f  (Mathlib uses μ.real directly)
+        have h_markov := mul_meas_ge_le_integral_of_nonneg
+          h_sq_nonneg h_shift_int ((t + u) ^ 2)
+        -- h_markov : (t+u)² * μ.real{(Y+u)² ≥ (t+u)²} ≤ ∫(Y+u)²
+        rw [le_div_iff₀ h_c_pos]
+        linarith
+    _ ≤ (sigma_sq + u ^ 2) / (t + u) ^ 2 :=
+        div_le_div_of_nonneg_right h_E_le (by positivity)
+
 end

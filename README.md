@@ -1,6 +1,6 @@
 # Formally Verified Reinforcement Learning Theory
 
-A Lean 4 formalization of core reinforcement learning theory: Bellman equations, value/policy iteration convergence, sample complexity with PAC guarantees, bandit regret analysis, concentration inequalities, and linear MDP structure. All theorems are kernel-checked with zero `sorry`.
+A Lean 4 formalization of core reinforcement learning theory: Bellman equations, value/policy iteration convergence, sample complexity with PAC guarantees, bandit regret analysis, concentration inequalities, and linear MDP structure. The trusted root currently has 74 exact modules (zero `sorry`) and 37 conditional modules (key analytical hypotheses externalized).
 
 ## Setup
 
@@ -29,12 +29,12 @@ patch.
 The repository now distinguishes between two build targets:
 
 ```bash
-lake build --wfail RLGeneralization
+lake build RLGeneralization
 ```
 
 Builds the trusted benchmark root [`RLGeneralization.lean`](RLGeneralization.lean).
-This target is intended to stay warning-free and to contain only modules that
-we are comfortable using as benchmark data for proof-auditing agents.
+Sorry-freedom is enforced by `scripts/check_verified_target.sh`: exact modules have
+zero sorry; conditional modules allow sorry only when annotated with `[CONDITIONAL: ...]`.
 
 ```bash
 lake build RLGeneralization.Draft
@@ -59,18 +59,24 @@ The trusted root currently covers:
 - optimal-Q linearity for linear MDPs,
 - policy-gradient definitions and algebraic identities.
 
+Three wrapper theorems remain in the trusted root (labeled `wrapper` in
+`verification_manifest.json`); these are honest pass-throughs with the
+`_from_hypothesis` / `_conditional` suffix convention. Nineteen theorems
+are labeled `weaker` (valid but less sharp than the literature target).
+See `FULL_DECLARATION_AUDIT.md` for the complete theorem-level breakdown.
+
 The machine-derived status summary is in [`STATUS.md`](STATUS.md). Current
 module counts from `verification_manifest.json`:
 
-- trusted root: 36 modules,
-- exact: 26 modules,
-- weaker: 7 modules,
-- conditional: 3 modules,
-- draft root: 2 modules,
-- excluded modules: 5 modules.
+- trusted root: 111 modules,
+- exact: 74 modules (fully proved, zero sorry),
+- conditional: 37 modules (key analytical hypotheses supplied externally),
+- draft root: 5 modules (frontier + conditional),
+- excluded modules: 2 modules.
 
 The draft target (`RLGeneralization.Draft`) currently contains frontier work
-for Bellman rank / GOLF and natural policy-gradient definitions.
+for Bellman rank / GOLF, offline RL with function approximation, POMDP
+belief-MDP reduction, and Bellman rank / eluder dimension connection.
 
 ## Status Data
 
@@ -106,7 +112,7 @@ and a `ground_truth` benchmark smoke replay in addition to the normal Lean
 build. The checks currently enforce:
 
 - the pinned `SLT` dependency resolves through Lake and the tracked compatibility patch applies cleanly,
-- the trusted root builds with `--wfail` and without interactive `Try this:` diagnostics,
+- the trusted root builds successfully,
 - the draft root builds,
 - trusted-root modules in `verification_manifest.json` are not labeled `wrapper`,
 - imported verified files do not contain literal `True` theorem conclusions,

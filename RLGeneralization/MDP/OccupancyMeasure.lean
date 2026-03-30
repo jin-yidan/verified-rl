@@ -2,27 +2,31 @@
 Copyright (c) 2026 Yidan Jin. All rights reserved.
 This source code is proprietary and not licensed for public use.
 
-# Truncated Performance Difference Lemma and Transition Powers
+# Occupancy Measure and Performance-Difference Lemma
 
-Defines truncated state-visitation weights via transition-matrix
-powers and proves a truncated performance-difference identity as a finite
-telescoping identity with a γ^T remainder term.
-
-NOTE: `truncatedOccupancy` is a **state-only** object (T → s₀ → s → ℝ),
-not the full state-action occupancy measure d^π(s,a) from the standard RL presentation.
-The exact infinite-horizon occupancy-measure performance-difference identity is NOT
-formalized as a standalone theorem; we prove the truncated identity
-together with the remainder-vanishing estimate for the T → ∞ limit.
+Defines truncated and infinite-horizon state-visitation weights via
+transition-matrix powers. Proves the truncated performance-difference
+identity, remainder vanishing, and the exact infinite-horizon
+occupancy-measure form of the Kakade-Langford PDL.
 
 ## Main Definitions
 
 * `truncatedOccupancy` - Truncated occupancy: (1-γ)∑_{t=0}^{T-1} γ^t (P^π)^t
 * `expectedReturn` - Truncated expected return: ∑_{t=0}^{T-1} γ^t r^π(s_t)
+* `discountedVisitation` - Unnormalized occupancy: ∑_{t≥0} γ^t (P^π)^t(s₀,s),
+  sums to 1/(1-γ) over states.
+* `stateOccupancy` - Normalized occupancy: (1-γ) · discountedVisitation,
+  a proper distribution over states (sums to 1).
 
 ## Main Results
 
 * `truncated_pdl` - Truncated PDL: exact telescoping identity for
   finite-horizon prefix, with a γ^T remainder term.
+* `pdl_remainder_vanishes` - The γ^T remainder vanishes as T → ∞.
+* `pdl_occupancy_form` - Kakade-Langford PDL (unnormalized occupancy):
+  V^π - V^{π'} = ∑_s d_unnorm(s) · E_π[A^{π'}(s)].
+* `pdl_normalized` - Kakade-Langford PDL (normalized form):
+  V^π - V^{π'} = (1/(1-γ)) · ∑_s d^π(s) · E_π[A^{π'}(s)].
 
 ## References
 

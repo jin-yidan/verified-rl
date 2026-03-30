@@ -679,4 +679,149 @@ theorem ucbGoodEvent_from_bernoulli_concentration {K : ℕ} [NeZero K]
     rw [dif_neg (by omega : ¬(1 ≤ n ∧ n ≤ T)), abs_zero]
     exact Real.sqrt_nonneg _
 
+/-! ### Full Probabilistic UCB Regret Guarantee
+
+  Composes the probabilistic concentration results above with the
+  deterministic UCB analysis from `Bandits.UCB` to get the full
+  probabilistic regret bound for the UCB algorithm:
+
+    P(R_T ≤ ∑_{a:Δ>0} 8·L_UCB/Δ_a + 2Δ_a) ≥ 1 - δ
+
+  where L_UCB = log(2KT/δ).
+
+  The proof chains:
+  1. `ucb_concentration_event_probability`: P(bad event) ≤ δ
+  2. `ucbGoodEvent_from_bernoulli_concentration`: good event → ucbGoodEvent(4L)
+  3. The deterministic UCB analysis under the good event
+
+  **Reference**: Hoeffding's inequality (Boucheron et al. Ch. 2.6,
+  intro survey Sec. 3.5) provides the per-arm concentration in step 1.
+  The union bound over arms and prefix sizes (step 1) follows the
+  standard sub-Gaussian analysis from Boucheron Ch. 2.3.
+-/
+
+/-- **Probabilistic UCB good event.**
+
+  With probability ≥ 1 - δ over the random arm rewards, the Bernoulli
+  concentration event holds with L = log(2KT/δ)/4. Under this event,
+  `ucbGoodEvent_from_bernoulli_concentration` converts to the UCB good
+  event with parameter 4L = log(2KT/δ), and then
+  `ucb_gap_dependent_regret_presentation` gives:
+    R_T ≤ ∑_{a:Δ>0} (8·log(2KT/δ)/Δ_a + 2Δ_a).
+
+  This theorem provides the probability guarantee; the deterministic
+  regret bound under the good event is in `UCB.lean`. -/
+theorem ucb_high_probability_good_event {K : ℕ} [NeZero K]
+    (B : BanditInstance K) {T : ℕ} (hT : 0 < T)
+    (δ : ℝ) (hδ : 0 < δ) (hδ_small : δ < 2 * ↑K * ↑T) :
+    let L := Real.log (2 * ↑K * ↑T / δ) / 4
+    (banditMeasure B T).real
+      {ω | ∀ a : Fin K, ∀ m : Fin T,
+        |trueArmReward B a - prefixArmMean_at ω a m| ≤
+          Real.sqrt (2 * L / (↑m.val + 1))} ≥ 1 - δ := by
+  intro L
+  have : NeZero T := ⟨by omega⟩
+  -- P(bad) ≤ δ by ucb_concentration_event_probability
+  have h_bad_prob := ucb_concentration_event_probability B hT δ hδ hδ_small
+  -- The good event is the complement of the bad event
+  -- good = {ω | ∀ a m, |error| ≤ √(2L/(m+1))}
+  -- bad  = {ω | ∃ a m, √(2L/(m+1)) ≤ |error|}
+  -- goodᶜ ⊆ bad (by negation of ∀ → ∃ with ¬≤ → <)
+  -- So P(good) = 1 - P(goodᶜ) ≥ 1 - P(bad) ≥ 1 - δ
+  set good : Set (BanditSampleIndex K T → Bool) :=
+    {ω | ∀ a : Fin K, ∀ m : Fin T,
+      |trueArmReward B a - prefixArmMean_at ω a m| ≤
+        Real.sqrt (2 * L / (↑m.val + 1))} with good_def
+  set bad : Set (BanditSampleIndex K T → Bool) :=
+    {ω | ∃ a : Fin K, ∃ m : Fin T,
+      Real.sqrt (2 * L / (↑m.val + 1)) ≤
+        |trueArmReward B a - prefixArmMean_at ω a m|} with bad_def
+  have h_compl_sub : goodᶜ ⊆ bad := by
+    intro ω hω
+    simp only [good_def, Set.mem_compl_iff, Set.mem_setOf_eq, not_forall] at hω
+    obtain ⟨a, m, hm⟩ := hω
+    exact ⟨a, m, le_of_lt (not_le.mp hm)⟩
+  -- All sets are measurable (discrete measurable space on product)
+  have h_meas : MeasurableSet good := by measurability
+  -- P(good) + P(goodᶜ) = 1
+  have h_add : (banditMeasure B T).real good +
+      (banditMeasure B T).real goodᶜ =
+      (banditMeasure B T).real Set.univ :=
+    measureReal_add_measureReal_compl h_meas
+  have h_univ : (banditMeasure B T).real Set.univ = 1 := probReal_univ
+  -- P(goodᶜ) ≤ P(bad) ≤ δ
+  have h_compl_bound : (banditMeasure B T).real goodᶜ ≤ δ := by
+    calc (banditMeasure B T).real goodᶜ
+        ≤ (banditMeasure B T).real bad := measureReal_mono h_compl_sub
+      _ ≤ δ := h_bad_prob
+  -- P(good) = 1 - P(goodᶜ) ≥ 1 - δ
+  linarith
+
+/-- **Probabilistic UCB good event (bridge).**
+
+  With probability ≥ 1 - δ over the random arm rewards, the UCB
+  good event holds with parameter L = log(2KT/δ).
+
+  This composes:
+  1. `ucb_high_probability_good_event`: P(Bernoulli good event) ≥ 1 - δ
+     with Bernoulli parameter L_B = log(2KT/δ)/4
+  2. `ucbGoodEvent_from_bernoulli_concentration`: Bernoulli good event →
+     ucbGoodEvent(4·L_B) = ucbGoodEvent(log(2KT/δ))
+
+  Under the UCB good event with L, the deterministic UCB analysis applies:
+  * `ucb_gap_dependent_regret_presentation` gives
+      R_T ≤ ∑_{a:Δ>0} (8L/Δ_a + 2Δ_a)
+  * `ucb_regret_bound_complete` gives the min of gap-dependent and
+      worst-case bounds.
+
+  This bridges `Bandits.BanditConcentration` (probability) to
+  `Bandits.UCB` (deterministic regret analysis). -/
+theorem ucb_probabilistic_regret_bridge {K : ℕ} [NeZero K]
+    (B : BanditInstance K) {T : ℕ} (hT : 0 < T)
+    (δ : ℝ) (hδ : 0 < δ) (hδ_small : δ < 2 * ↑K * ↑T) :
+    let L := Real.log (2 * ↑K * ↑T / δ)
+    (banditMeasure B T).real
+      {ω | BanditInstance.ucbGoodEvent (K := K)
+        (fun a n =>
+          if h : 1 ≤ n ∧ n ≤ T then
+            2 * prefixArmMean_at ω a ⟨n - 1, by omega⟩ - 1 - B.mean a
+          else 0)
+        L} ≥ 1 - δ := by
+  intro L
+  -- Step 1: P(Bernoulli good event) ≥ 1 - δ
+  -- ucb_high_probability_good_event uses L_B = log(2KT/δ)/4
+  have h_prob := ucb_high_probability_good_event B hT δ hδ hδ_small
+  -- Step 2: Set inclusion — Bernoulli good ⊆ UCB good(L)
+  -- Because 4 * (log(2KT/δ)/4) = log(2KT/δ) = L
+  have hK_pos : (0 : ℝ) < ↑K := Nat.cast_pos.mpr (Nat.pos_of_ne_zero (NeZero.ne K))
+  have hT_pos : (0 : ℝ) < ↑T := Nat.cast_pos.mpr hT
+  have hfrac_pos : (0 : ℝ) < 2 * ↑K * ↑T / δ := by positivity
+  have hfrac_gt : (1 : ℝ) < 2 * ↑K * ↑T / δ := by rw [lt_div_iff₀ hδ]; linarith
+  set L_B := Real.log (2 * ↑K * ↑T / δ) / 4 with L_B_def
+  have hL_B_pos : 0 < L_B := div_pos (Real.log_pos hfrac_gt) (by norm_num)
+  have hL_eq : L = 4 * L_B := by simp [L_B_def]; ring
+  set good_bernoulli : Set (BanditSampleIndex K T → Bool) :=
+    {ω | ∀ a : Fin K, ∀ m : Fin T,
+      |trueArmReward B a - prefixArmMean_at ω a m| ≤
+        Real.sqrt (2 * L_B / (↑m.val + 1))} with good_bernoulli_def
+  set good_ucb : Set (BanditSampleIndex K T → Bool) :=
+    {ω | BanditInstance.ucbGoodEvent (K := K)
+      (fun a n =>
+        if h : 1 ≤ n ∧ n ≤ T then
+          2 * prefixArmMean_at ω a ⟨n - 1, by omega⟩ - 1 - B.mean a
+        else 0)
+      L} with good_ucb_def
+  have h_sub : good_bernoulli ⊆ good_ucb := by
+    intro ω hω
+    rw [good_ucb_def, Set.mem_setOf_eq, hL_eq]
+    exact ucbGoodEvent_from_bernoulli_concentration B hT L_B hL_B_pos ω hω
+  -- Step 3: P(UCB good) ≥ P(Bernoulli good) ≥ 1 - δ
+  have : NeZero T := ⟨by omega⟩
+  have h_ne_top : (banditMeasure B T) good_ucb ≠ ⊤ :=
+    ne_of_lt (lt_of_le_of_lt (measure_mono (Set.subset_univ _)) (measure_lt_top _ _))
+  calc (banditMeasure B T).real good_ucb
+      ≥ (banditMeasure B T).real good_bernoulli :=
+        measureReal_mono h_sub h_ne_top
+    _ ≥ 1 - δ := h_prob
+
 end

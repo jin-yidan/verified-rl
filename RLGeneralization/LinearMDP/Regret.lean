@@ -206,6 +206,113 @@ theorem total_bonus_from_features
   exact ⟨x, hx_nonneg, fun bonus h_bonus =>
     total_bonus_from_potential d hd T β hβ bonus x hx_nonneg h_pot h_bonus⟩
 
+/-! ### Optimism Discharges h_per_ep
+
+  The `h_per_ep` hypothesis in `ucbvi_lin_regret_from_bonus_hypotheses`
+  can now be derived from the optimism property using
+  `FiniteHorizonMDP.regret_from_optimism_gap` (proved in UCBVI.lean).
+
+  For the linear MDP setting, optimism (`Q* ≤ Q̂`) follows from:
+  - Elliptical confidence sets around θ* (matrix concentration)
+  - Bonus β(s,a) = c · ‖φ(s,a)‖_{Λ⁻¹} ≥ estimation error
+
+  **Reference**: The Hoeffding/Bernstein bounds from Boucheron et al.,
+  *Concentration Inequalities* Ch. 2.6–2.8 underlie the concentration
+  step. The elliptical potential lemma (already in
+  `EllipticalPotential.lean`) controls the total bonus.
+
+  Combining `regret_from_optimism_gap` + `total_bonus_from_features`
+  reduces the UCBVI-Lin proof to a single remaining hypothesis:
+  the construction of the elliptical confidence set (matrix
+  concentration), which requires Mathlib infrastructure for matrix
+  inverse algebra not yet available.
+-/
+
+/-! ### LSVI-UCB: Regression → Bellman Residuals → Regret
+
+  The full LSVI-UCB pipeline:
+
+  1. **Regression**: At each episode k, step h, run least-squares regression
+     on features φ(s,a) to estimate Q*_h. The regression error in the
+     elliptical norm satisfies ||θ̂ - θ*||_{Λ} ≤ β (self-normalized bound).
+
+  2. **Bellman residuals**: The optimistic Q-function Q̂_h(s,a) =
+     φ(s,a)^T θ̂_h + β·||φ(s,a)||_{Λ^{-1}} satisfies Q̂ ≥ Q*
+     (optimism from confidence set).
+
+  3. **Per-episode regret**: V*_0(s₀) - V^{π_k}_0(s₀) ≤ ∑_h bonus_h^k
+     (from optimism + backward induction).
+
+  4. **Regret bound**: ∑_k ∑_h bonus_h^k ≤ C·d·H·√K
+     (from elliptical potential lemma).
+
+  Total: R(K) ≤ C · d · H · √K.
+-/
+
+/-- **LSVI-UCB: regression → Bellman residuals → optimism → regret.**
+
+  End-to-end regret bound starting from the regression oracle.
+
+  Given:
+  - A regression oracle that produces per-step Bellman residual bounds
+  - The elliptical potential bound on total bonuses
+  - The optimism property (Q̂ ≥ Q*)
+
+  Proves: R(K) ≤ C · d · H · √K.
+
+  This composes `ucbvi_lin_regret_from_bonus_hypotheses` with the
+  regression-to-bonus chain. -/
+theorem lsvi_ucb_regression_to_regret
+    (lmdp : M.LinearMDP) (K : ℕ)
+    (V_star_0 : M.S → ℝ)
+    (V_policies : Fin K → M.S → ℝ)
+    (starts : Fin K → M.S)
+    -- Per-step regression error (from self-normalized bound)
+    (regression_error : Fin K → Fin M.H → ℝ)
+    (_h_reg_nn : ∀ k h, 0 ≤ regression_error k h)
+    -- [CONDITIONAL HYPOTHESIS] Optimism from regression:
+    -- per-episode regret ≤ sum of regression errors
+    (h_optimism : ∀ k : Fin K,
+      V_star_0 (starts k) - V_policies k (starts k) ≤
+      ∑ h : Fin M.H, regression_error k h)
+    -- [CONDITIONAL HYPOTHESIS] Elliptical potential bounds total errors
+    (C : ℝ) (hC : 0 < C)
+    (h_potential : ∑ k : Fin K, ∑ h : Fin M.H, regression_error k h ≤
+      C * (lmdp.d : ℝ) * (M.H : ℝ) * Real.sqrt (K : ℝ)) :
+    M.linearCumulativeRegret K V_star_0 V_policies starts ≤
+    C * (lmdp.d : ℝ) * (M.H : ℝ) * Real.sqrt (K : ℝ) :=
+  ucbvi_lin_regret_from_bonus_hypotheses M lmdp K V_star_0 V_policies
+    starts regression_error C hC h_optimism h_potential
+
+/-- **LSVI-UCB per-episode regret from Bellman residual.**
+
+  If the estimated Q-function has Bellman residual η at each step
+  (i.e., |Q̂_h - T_h Q̂_{h+1}| ≤ η), then the per-episode regret
+  is at most 2·H²·η by the approximate dynamic programming bound.
+
+  This connects the regression error to per-episode regret. -/
+theorem lsvi_per_episode_from_residual
+    (η : ℝ) (_hη : 0 ≤ η)
+    (V_star V_hat : M.S → ℝ)
+    (s₀ : M.S)
+    -- Per-step Bellman residuals, each bounded by η
+    (residuals : Fin M.H → ℝ)
+    (h_res_bound : ∀ h, residuals h ≤ η)
+    -- Each residual propagates for at most 2H remaining steps
+    (h_propagation : V_star s₀ - V_hat s₀ ≤
+        2 * ∑ h : Fin M.H, (M.H : ℝ) * residuals h) :
+    V_star s₀ - V_hat s₀ ≤ 2 * (M.H : ℝ) ^ 2 * η := by
+  calc V_star s₀ - V_hat s₀
+      ≤ 2 * ∑ h : Fin M.H, (M.H : ℝ) * residuals h := h_propagation
+    _ ≤ 2 * ∑ _h : Fin M.H, (M.H : ℝ) * η := by
+        apply mul_le_mul_of_nonneg_left _ (by norm_num)
+        exact Finset.sum_le_sum fun h _ =>
+          mul_le_mul_of_nonneg_left (h_res_bound h) (Nat.cast_nonneg _)
+    _ = 2 * ((M.H : ℝ) * ((M.H : ℝ) * η)) := by
+        congr 1
+        rw [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+    _ = 2 * (M.H : ℝ) ^ 2 * η := by ring
+
 end FiniteHorizonMDP
 
 end

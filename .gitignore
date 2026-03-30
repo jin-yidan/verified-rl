@@ -11,3 +11,9 @@ benchmark/.audit_verify/
 benchmark/results/*_results.json
 benchmark/results/*_analysis.json
 benchmark/results/*.local.json
+/.claude/
+DEEP_RESEARCH_ANALYSIS.md
+RESEARCH_PLAN.md
+RESEARCH_PLAN_V2.md
+RESEARCH_PLAN_V3.md
+mathlib-infrastructure-audit.md

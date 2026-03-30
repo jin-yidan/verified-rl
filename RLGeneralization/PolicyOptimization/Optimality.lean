@@ -48,7 +48,11 @@ structure GradientDomination (d : ℕ) where
   J : (Fin d → ℝ) → ℝ
   /-- Gradient of J -/
   gradJ : (Fin d → ℝ) → (Fin d → ℝ)
-  /-- Gradient norm function -/
+  /-- Gradient norm function
+      NOTE: gradNorm is an abstract field. The standard PL condition
+      (Agarwal et al.) uses the squared gradient norm ||∇J||².
+      Users should instantiate gradNorm with ||∇J||² to match
+      the standard form. -/
   gradNorm : (Fin d → ℝ) → ℝ
   /-- Optimal parameter value -/
   θ_star : Fin d → ℝ
@@ -60,7 +64,11 @@ structure GradientDomination (d : ℕ) where
   θ_star_optimal : ∀ θ, J θ ≤ J θ_star
   /-- Gradient norm is nonneg -/
   gradNorm_nonneg : ∀ θ, 0 ≤ gradNorm θ
-  /-- The gradient domination condition: `J(θ*) - J(θ) ≤ C · ‖∇J(θ)‖`. -/
+  /-- The gradient domination condition: `J(θ*) - J(θ) ≤ C · gradNorm(θ)`.
+      NOTE: gradNorm is an abstract field. The standard PL condition
+      (Agarwal et al.) uses the squared gradient norm ||∇J||².
+      Users should instantiate gradNorm with ||∇J||² to match
+      the standard form. -/
   domination : ∀ θ, J θ_star - J θ ≤ C * gradNorm θ
 
 /-- The suboptimality gap `J(θ*) - J(θ)` is nonnegative when `θ*` is optimal.
