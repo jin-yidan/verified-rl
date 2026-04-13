@@ -2,7 +2,7 @@
 
 A machine-checked formalization of reinforcement learning theory, built on
 [Mathlib](https://github.com/leanprover-community/mathlib4). The library
-contains **116 trusted modules** (+ 3 draft) and **46,000+ lines** of Lean 4
+contains **117 trusted modules** and **46,000+ lines** of Lean 4
 code with **zero `sorry`** anywhere in the codebase.
 
 ## What's Proved
@@ -62,8 +62,8 @@ This result is **not available in Mathlib** and is a standalone contribution.
 
 | Area | Modules | Contents |
 |------|---------|----------|
-| **MDP Theory** | 22 | Bellman equations, contraction, value/policy iteration, simulation lemma, finite-horizon, LP formulation, average reward, POMDP, constrained MDP, options, reward shaping, HJB |
-| **Concentration** | 24 | Hoeffding, Bernstein, Bennett, Azuma-Hoeffding, McDiarmid, Talagrand, sub-Gaussian, matrix Bernstein, self-normalized, Johnson-Lindenstrauss, large deviations, generative model PAC |
+| **MDP Theory** | 21 | Bellman equations, contraction, value/policy iteration, simulation lemma, finite-horizon, LP formulation, average reward, POMDP, constrained MDP, options, reward shaping, HJB |
+| **Concentration** | 28 | Hoeffding, Bernstein, Bennett, Azuma-Hoeffding, McDiarmid, Talagrand, sub-Gaussian, matrix Bernstein, self-normalized, Johnson-Lindenstrauss, large deviations, generative model PAC |
 | **Bandits** | 8 | UCB (gap-dependent + worst-case), LinUCB, EXP3, Thompson sampling, lower bounds, probabilistic regret |
 | **Generalization** | 10 | Sample complexity, uniform convergence, PAC-Bayes, Dudley integral, transfer RL, SLT bridge |
 | **Complexity** | 6 | VC dimension, Rademacher complexity, symmetrization, covering/packing, generic chaining, eluder dimension |
@@ -71,16 +71,16 @@ This result is **not available in Mathlib** and is a standalone contribution.
 | **Policy Optimization** | 6 | Policy gradient, NPG, CPI, TRPO, actor-critic, gradient domination |
 | **Algorithms** | 6 | Q-learning, SARSA, linear TD, MCTS, model-based RL, generative Q-learning |
 | **Linear MDP** | 7 | Optimal Q linearity, elliptical potential lemma, regret bounds, LinUCB bridge, LSVI |
-| **Other** | 21 | Offline RL, bilinear rank, imitation learning, LQR, lower bounds, privacy, optimization, approximation, executable planners |
+| **Other** | 19 | Offline RL, bilinear rank, imitation learning, LQR, lower bounds, privacy, optimization, approximation, executable planners |
 
 ## Proof Architecture
 
 The library uses two proof tiers:
 
-- **Unconditional** (94 modules): Fully proved from definitions to final
+- **Unconditional** (90 modules): Fully proved from definitions to final
   theorem, building only on Mathlib. No assumptions beyond the problem setup.
 
-- **Conditional** (19 modules): The algebraic/compositional content is fully
+- **Conditional** (27 modules): The algebraic/compositional content is fully
   proved, but measure-theoretic steps (taking expectations, proving
   measurability, applying concentration to specific probability spaces) are
   taken as hypotheses. These hypotheses mark where Mathlib's current API
@@ -107,8 +107,7 @@ at a pinned commit, with a compatibility patch for Lean 4 v4.28.0 applied by
 ## Build Targets
 
 ```bash
-lake build RLGeneralization     # Trusted root: 116 modules
-lake build RLGeneralization.Draft  # Frontier modules (additional 3)
+lake build RLGeneralization     # Trusted root: 117 modules
 ```
 
 ## CI
