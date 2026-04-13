@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Run the ground_truth prover on the known-failure regression set.
 
-This targets the 15 theorems that failed in the last full replay, allowing
-fast iteration on replay-harness fixes before running the full 200-problem
-sweep.
+This targets the theorems that failed in the last full replay, allowing
+fast iteration on replay-harness fixes before running the full sweep.
+Fails if fewer than half the listed theorems are present in the benchmark.
 
 Usage:
     python benchmark/test_regression.py
@@ -19,23 +19,13 @@ sys.path.insert(0, str(ROOT / "benchmark"))
 
 from evaluate import LeanCheckProver, make_lean_problem, RESULTS_DIR  # noqa: E402
 
-# The 15 theorems that failed in the last full ground_truth replay.
+# Theorems that failed in a prior ground_truth replay and still exist in
+# the current benchmark.  Twelve entries were removed because their
+# underlying theorems were renamed or dropped from mlstatbench.json.
 REGRESSION_THEOREMS = [
     "generative_model_pac",
-    "generative_model_pac_bernstein",
-    "optArm_gap",
-    "exists_optimal_arm",
-    "gap_nonneg",
-    "pseudoRegret_nonneg",
-    "gap_eq_zero_iff_opt",
     "pseudoRegret_eq_sum_gap",
-    "oracle_worst_case_bound_via_etc",
-    "minimax_rate_scaling_V_abs",
-    "minimax_rate_scaling_V",
-    "optimalQFixedPoint_isBellmanOptimalQ",
-    "gamma_pow_le_exp_neg",
     "stageCost_nonneg",
-    "R_max_pos",
 ]
 
 
@@ -62,6 +52,15 @@ def main() -> None:
     if missing:
         print(f"warning: {len(missing)} regression theorems not in benchmark: "
               f"{sorted(missing)}", file=sys.stderr)
+
+    # Fail if too many regression theorems are missing — the benchmark file
+    # has drifted and the regression set needs updating.
+    min_required = len(REGRESSION_THEOREMS) // 2
+    if len(problems) < min_required:
+        print(f"error: only {len(problems)}/{len(REGRESSION_THEOREMS)} regression "
+              f"theorems found (minimum {min_required}); update REGRESSION_THEOREMS "
+              f"or benchmark/mlstatbench.json", file=sys.stderr)
+        sys.exit(1)
 
     prover = LeanCheckProver()
     passed = 0

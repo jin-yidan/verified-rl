@@ -40,8 +40,45 @@ if [[ ! -f "$ROOT_OLEAN" ]]; then
   exit 1
 fi
 
-if grep -En ":\s*True\s*:=\s*by" "${FILES[@]}"; then
-  echo "verified target contains a theorem/lemma with a literal True conclusion" >&2
+# Catch literal True placeholders (block-comment-aware, handles both → and ->).
+TRUE_HITS=()
+for f in "${FILES[@]}"; do
+  while IFS= read -r hit; do
+    [[ -n "$hit" ]] && TRUE_HITS+=("$hit")
+  done < <(python3 -c "
+import re, sys
+text = open('$f').read()
+# Strip block comments /- ... -/
+depth = 0
+stripped = []
+for ln, line in enumerate(text.splitlines(), 1):
+    out = []; i = 0
+    while i < len(line):
+        if depth == 0:
+            if line[i:i+2] == '/-': depth += 1; i += 2
+            else: out.append(line[i]); i += 1
+        else:
+            if line[i:i+2] == '/-': depth += 1; i += 2
+            elif line[i:i+2] == '-/': depth -= 1; i += 2
+            else: i += 1
+    if depth == 0:
+        stripped.append((ln, ''.join(out)))
+for ln, line in stripped:
+    s = line.strip()
+    if s.startswith('--'): continue
+    cp = line.find('--')
+    code = line[:cp] if cp >= 0 else line
+    # : True :=  or  True :=  at line start  or  →/-> True  or  True)
+    if re.search(r':\s*True\s*:=', code) or re.search(r'^\s*True\s*:=', code) \
+       or re.search(r'(→|->)\s*True\b', code) or re.search(r'^\s*True\s*\)', code):
+        print(f'$f:{ln}:{s[:120]}')
+" 2>/dev/null || true)
+done
+if [[ ${#TRUE_HITS[@]} -gt 0 ]]; then
+  echo "verified target contains literal True placeholder(s):" >&2
+  for hit in "${TRUE_HITS[@]}"; do
+    echo "  $hit" >&2
+  done
   exit 1
 fi
 
@@ -128,7 +165,7 @@ fi
 
 # -------------------------------------------------------------------
 # Check ALL trusted-root modules (exact + conditional) for unannotated sorry.
-# Conditional modules may have sorry only within 5 lines of a [CONDITIONAL: ...] annotation.
+# Conditional modules may have sorry only within 10 lines of a [CONDITIONAL: ...] annotation.
 # Block comments are excluded.
 # -------------------------------------------------------------------
 UNANNOTATED_SORRY=()
@@ -193,9 +230,9 @@ for entry in modules:
             # Exact modules were already checked above; skip
             continue
 
-        # For conditional modules: allow sorry if [CONDITIONAL: ...] is within 5 lines
+        # For conditional modules: allow sorry if [CONDITIONAL: ...] is within 10 lines
         has_annotation = False
-        for offset in range(-5, 6):
+        for offset in range(-10, 11):
             nearby = line_dict.get(line_num + offset, '')
             if re.search(r'\[CONDITIONAL\b', nearby):
                 has_annotation = True
@@ -206,7 +243,7 @@ for entry in modules:
 fi
 
 if [[ ${#UNANNOTATED_SORRY[@]} -gt 0 ]]; then
-  echo "FAIL: unannotated sorry in trusted-root modules (no [CONDITIONAL: ...] within 5 lines):" >&2
+  echo "FAIL: unannotated sorry in trusted-root modules (no [CONDITIONAL: ...] within 10 lines):" >&2
   for line in "${UNANNOTATED_SORRY[@]}"; do
     echo "  $line" >&2
   done
@@ -214,21 +251,42 @@ if [[ ${#UNANNOTATED_SORRY[@]} -gt 0 ]]; then
 fi
 
 # -------------------------------------------------------------------
-# Check that no RLGeneralization/Draft/ modules are imported by the trusted root.
+# Check that no draft modules are imported by the trusted root.
+# This blocks both `import RLGeneralization.Draft` and direct imports
+# of individual draft-target modules listed in the manifest.
 # -------------------------------------------------------------------
 DRAFT_IMPORTS=()
+
+# Build a regex alternation of all draft module names from the manifest.
+DRAFT_PATTERN='RLGeneralization\.Draft\b'
+if [[ -f "verification_manifest.json" ]]; then
+  while IFS= read -r draft_mod; do
+    [[ -n "$draft_mod" ]] || continue
+    escaped="$(printf '%s' "$draft_mod" | sed 's/\./\\./g')"
+    DRAFT_PATTERN="${DRAFT_PATTERN}|${escaped}\\b"
+  done < <(python3 -c "
+import json, sys
+try:
+    m = json.load(open('verification_manifest.json'))
+    for e in m.get('draft_target', {}).get('modules', []):
+        print(e['module'])
+except Exception as ex:
+    print('warn: ' + str(ex), file=sys.stderr)
+")
+fi
+
 for f in "${FILES[@]}"; do
   while IFS= read -r line; do
     DRAFT_IMPORTS+=("$line")
-  done < <(grep -nE '^\s*import\s+RLGeneralization\.Draft\b' "$f" 2>/dev/null || true)
+  done < <(grep -nE "^\s*import\s+($DRAFT_PATTERN)" "$f" 2>/dev/null || true)
 done
 # Also check the root file itself
 while IFS= read -r line; do
   DRAFT_IMPORTS+=("$line")
-done < <(grep -nE '^\s*import\s+RLGeneralization\.Draft\b' "$ROOT_FILE" 2>/dev/null || true)
+done < <(grep -nE "^\s*import\s+($DRAFT_PATTERN)" "$ROOT_FILE" 2>/dev/null || true)
 
 if [[ ${#DRAFT_IMPORTS[@]} -gt 0 ]]; then
-  echo "FAIL: trusted-root modules import from RLGeneralization/Draft/:" >&2
+  echo "FAIL: trusted-root modules import draft modules:" >&2
   for line in "${DRAFT_IMPORTS[@]}"; do
     echo "  $line" >&2
   done

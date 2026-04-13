@@ -267,19 +267,6 @@ theorem uniform_convergence_from_covering
     uniformDeviation ≤ ε :=
   h_uc
 
-/-- **Uniform convergence, existential form**: There exists a universal
-    constant C such that n ≥ C·(d·log(B/ε) + log(1/δ))/ε² samples suffice.
-
-    This packages the sample size requirement as an existential. -/
-theorem uniform_convergence_from_covering_exists
-    (F : RLValueFunctionClass)
-    (ε δ : ℝ) (_hε : 0 < ε) (_hδ : 0 < δ) (_hδ1 : δ < 1) :
-    ∃ (C : ℝ), 0 < C ∧
-      ∀ (n : ℕ), C * ((F.d : ℝ) * log (F.B / ε) + log (1 / δ)) / ε ^ 2 ≤ (n : ℝ) →
-        -- The conclusion: uniform convergence holds
-        True := by
-  exact ⟨1, one_pos, fun _ _ => trivial⟩
-
 /-! ## Bridge Theorem (b): Bellman Error Concentration
 
 If the Q-function class has covering dimension d, then the empirical

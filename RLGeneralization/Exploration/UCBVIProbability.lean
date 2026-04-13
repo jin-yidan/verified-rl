@@ -2,28 +2,27 @@
 Copyright (c) 2026 Yidan Jin. All rights reserved.
 This source code is proprietary and not licensed for public use.
 
-# UCBVI with Probability Bounds
+# UCBVI Regret Composition
 
-Formalizes the UCBVI algorithm with actual high-probability regret bounds.
-While `UCBVI.lean` provides the algebraic core (regret decomposition,
-bonus structure), this file adds the probability layer:
+Composes the UCBVI algebraic core (`UCBVI.lean`) into end-to-end regret
+bounds, conditional on deterministic bonus hypotheses.
 
-1. **Concentration event**: With probability ≥ 1-δ, the empirical model
-   is close to the true model at all (s,a,h) pairs.
+`ConcentrationEvent` packages the bonus-covering property as a structure;
+the probability guarantee (that this event holds with prob ≥ 1-δ) is not
+formalized and would require a measure-theoretic construction.
 
-2. **Optimism under concentration**: On the good event, the optimistic
-   Q-function satisfies Q̂_h(s,a) ≥ Q*_h(s,a) for all (s,a,h).
-
-3. **Regret on the good event**: Regret ≤ O(H²·√(SAK·log(SAHK/δ))).
-
-4. **Final bound**: R(K) ≤ Õ(H²√(SAK)) with probability ≥ 1-δ.
+All theorems are deterministic compositions: they assume the bonus covers
+the transition estimation error and that the total bonus is bounded, then
+derive the cumulative regret bound algebraically.
 
 ## Main Results
 
-* `ConcentrationEvent` — Good event where empirical model is accurate
-* `optimism_on_good_event` — Q̂ ≥ Q* on the good event
-* `ucbvi_high_probability_regret` — R(K) ≤ C·H²·√(SAK·log(SAHK/δ)) w.h.p.
-* `ucbvi_expected_regret` — E[R(K)] ≤ Õ(H²√(SAK))
+* `ConcentrationEvent` — Structure packaging bonus-covering hypotheses
+* `optimism_on_good_event` — Q̂ ≥ Q* given nonneg gap hypothesis
+* `ucbvi_high_probability_regret` — R(K) ≤ C·H²·√(SAK·log(SAHK/δ))
+    given per-episode and total bonus hypotheses
+* `ucbvi_expected_regret` — expected regret bound given high-prob bound
+    and failure-case bound hypotheses
 
 ## References
 
@@ -66,11 +65,6 @@ structure ConcentrationEvent (K : ℕ) (δ : ℝ) where
   bonus_covers : ∀ (h : Fin M.H) (s : M.S) (a : M.A) (V : M.S → ℝ),
     (∀ s', 0 ≤ V s') → (∀ s', V s' ≤ M.H) →
     |∑ s', (P_hat h s a s' - M.P h s a s') * V s'| ≤ bonus h s a
-  /-- Hypothesis: the good event holds with probability ≥ 1-δ.
-      Requires a measure-theoretic probability space construction
-      (not formalized; placeholder). -/
-  prob_good : 0 < δ → δ < 1 → True
-
 /-! ### Optimism -/
 
 /-- **Optimism on the good event**: The UCBVI Q-function dominates Q*.

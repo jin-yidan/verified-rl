@@ -120,15 +120,14 @@ theorem dyna_k_step_contraction
 /-! ### End-to-End Model-Based RL -/
 
 /-- **End-to-end model-based RL bound**.
+    [WRAPPER: Pure le_trans of model error + planning error hypotheses.]
 
     The total optimality gap decomposes into model error and planning error:
 
       V*(s) - V^{π̂}(s) ≤ model_gap + planning_gap
 
     where model_gap ≤ 2·ε_model/(1-γ) and planning_gap → 0 as K → ∞.
-    This is the fundamental decomposition underlying all model-based methods:
-    learn a good model (reduce model_gap) and plan sufficiently (reduce
-    planning_gap). -/
+    Both bound components are taken as hypotheses; the body is le_trans + add_le_add. -/
 theorem model_based_end_to_end
     (model_gap planning_gap total_gap : ℝ)
     (h_total : total_gap ≤ model_gap + planning_gap)
@@ -184,12 +183,14 @@ theorem model_based_sample_size_algebra
 
 /-! ### Empirical Model Concentration -/
 
-/-- **Empirical model concentration (exact)**.
+/-- **Empirical model concentration**.
+    [WRAPPER: Returns concentration hypothesis directly.]
+
     With N samples per (s,a), the L1 transition error satisfies
     ||P̂ - P||₁ ≤ √(2S·log(2SA/δ)/N).
 
     The caller supplies the Hoeffding-derived concentration bound
-    directly; the theorem packages it in canonical form. -/
+    directly; the body returns the hypothesis unchanged. -/
 theorem empirical_model_concentration
     (S_card A_card N : ℕ)
     (_hS : 0 < S_card) (_hA : 0 < A_card) (_hN : 0 < N)
@@ -221,11 +222,13 @@ theorem model_based_pac
         linarith
 
 /-- **Dyna planning improvement**.
+    [WRAPPER: Pure le_trans of contraction and target hypotheses.]
+
     K planning steps improve the model-based value by a γ^K factor:
     ||V̂_K - V*|| ≤ γ^K·||V̂_0 - V*|| + model_error/(1-γ).
 
-    The first term is contraction from K Bellman backups in the approximate
-    model, the second term is the irreducible model error. -/
+    Both the contraction bound and the target bound are taken as
+    hypotheses; the body is le_trans. -/
 theorem dyna_planning_improvement
     (K : ℕ) (init_gap model_err planning_gap : ℝ)
     (_h_init : 0 ≤ init_gap)

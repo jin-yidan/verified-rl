@@ -195,25 +195,6 @@ theorem vc_pac_chain
 
 /-! ### Application to RL -/
 
-/-- **RL PAC learning via uniform convergence.**
-
-  For model-based RL with a function class of VC dimension d:
-  1. Estimate the model M̂ from N samples per (s,a)
-  2. Plan in M̂ to get policy π̂
-  3. Simulation lemma: |V^{π̂}_M - V^{π̂}_{M̂}| ≤ ε_model/(1-γ)
-  4. Planning: V^{π̂}_{M̂} ≥ V*_{M̂} - ε_plan
-  5. Uniform convergence: |V*_M - V*_{M̂}| ≤ ε_uc w.h.p.
-
-  Total: V*_M - V^{π̂}_M ≤ ε_model/(1-γ) + ε_plan + ε_uc
-
-  Sample complexity: N = O(S·d / ((1-γ)²·ε²) · log(S·A/δ))
--/
-def RLPACSpec (d : ℕ) (ε _δ : ℝ) (N : ℕ) (γ : ℝ) : Prop :=
-  ∃ (C : ℝ), 0 < C ∧
-    (C * ↑d / ((1 - γ) ^ 2 * ε ^ 2) ≤ ↑N →
-     -- N samples suffice for ε-suboptimality w.p. ≥ 1-δ
-     True)  -- placeholder for the probabilistic conclusion
-
 /-- **RL sample complexity from VC dimension.**
 
   If the transition model class has VC dimension d, and we use

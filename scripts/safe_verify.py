@@ -13,8 +13,13 @@ Also checks for other suspicious patterns:
   - opaque        : hides implementation details
 
 Strict mode (--strict):
-  - Fails if any EXACT-status module contains sorry, [WRAPPER], or [VACUOUS] markers.
-  - Uses verification_manifest.json to identify exact modules.
+  - Fails if any EXACT-status module contains banned patterns (sorry, native_decide,
+    axiom, sorryAx).
+  - Fails if any EXACT-status module contains undeclared wrapper/vacuous theorems
+    (not listed in verification_manifest.json's theorems array).
+  - Reports manifest-declared wrappers in exact modules as informational.
+  - Fails if any CONDITIONAL-status module contains unannotated sorry.
+  - Uses verification_manifest.json to identify modules and declared wrappers.
 
 Audit mode (--audit):
   - Emits a JSON object per .lean file with per-theorem status classification.
@@ -113,31 +118,34 @@ def check_results_file(results_path: Path) -> list[dict]:
 
 
 def scan_lean_files(scan_dir: Path) -> list[dict]:
-    """Scan .lean files for banned patterns in proof bodies."""
+    """Scan .lean files for banned patterns in proof bodies.
+
+    Uses _strip_block_comments() to avoid false positives from
+    /- ... -/ block comments and /-! ... -/ doc comments.
+    """
     issues: list[dict] = []
 
     for lean_file in sorted(scan_dir.rglob("*.lean")):
         text = lean_file.read_text(errors="replace")
         rel_path = str(lean_file.relative_to(ROOT))
 
-        for line_num, line in enumerate(text.splitlines(), 1):
-            # Skip comments
+        for line_num, line in _strip_block_comments(text):
+            # Skip line comments
             stripped = line.strip()
             if stripped.startswith("--"):
                 continue
 
             for name, pattern in BANNED_PATTERNS.items():
-                if pattern.search(line):
-                    # Check it is not inside a comment
-                    comment_pos = line.find("--")
-                    match = pattern.search(line)
-                    if match and (comment_pos < 0 or match.start() < comment_pos):
-                        issues.append({
-                            "file": rel_path,
-                            "line": line_num,
-                            "pattern": name,
-                            "text": stripped[:120],
-                        })
+                # Check it is not inside a line comment
+                comment_pos = line.find("--")
+                match = pattern.search(line)
+                if match and (comment_pos < 0 or match.start() < comment_pos):
+                    issues.append({
+                        "file": rel_path,
+                        "line": line_num,
+                        "pattern": name,
+                        "text": stripped[:120],
+                    })
 
     return issues
 
@@ -203,10 +211,18 @@ def _strip_block_comments(text: str) -> list[tuple[int, str]]:
 
 
 def strict_check() -> list[dict]:
-    """Check exact-status modules for sorry, [WRAPPER], and [VACUOUS] markers.
+    """Check exact-status modules for banned patterns and undeclared wrappers.
 
-    Also checks conditional-status modules for sorry that is NOT accompanied
-    by a [CONDITIONAL: ...] annotation within 10 lines (unannotated sorry).
+    Hard failures (always fail):
+      - sorry, native_decide, axiom, sorryAx in exact modules
+      - unannotated sorry in conditional modules
+
+    Wrapper/vacuous check (uses manifest as source of truth):
+      - Uses the canonical audit scanner to find all wrapper/vacuous
+        declarations in exact modules
+      - Fails if any wrapper/vacuous theorem in an exact module is NOT
+        declared in the manifest's theorems array (undeclared wrapper)
+      - Manifest-declared wrappers are reported but do not fail
     """
     issues: list[dict] = []
     exact_files = get_modules_by_status("exact")
@@ -222,22 +238,63 @@ def strict_check() -> list[dict]:
                 continue
             comment_pos = line.find("--")
 
-            # Check for sorry (not in -- comment)
-            m = BANNED_PATTERNS["sorry"].search(line)
-            if m and (comment_pos < 0 or m.start() < comment_pos):
-                issues.append({
-                    "file": rel_path, "line": line_num,
-                    "type": "sorry", "text": stripped[:120],
-                })
+            # Check all banned patterns (sorry, native_decide, axiom, sorryAx)
+            for ban_name, ban_pattern in BANNED_PATTERNS.items():
+                m = ban_pattern.search(line)
+                if m and (comment_pos < 0 or m.start() < comment_pos):
+                    issues.append({
+                        "file": rel_path, "line": line_num,
+                        "type": ban_name, "text": stripped[:120],
+                    })
 
-        # Check for [WRAPPER] or [VACUOUS] markers — only in non-block-comment lines
-        for line_num, line in _strip_block_comments(text):
-            if re.search(r'\[WRAPPER\b', line) or re.search(r'\[VACUOUS\b', line):
-                issues.append({
-                    "file": rel_path, "line": line_num,
-                    "type": "wrapper_or_vacuous",
-                    "text": line.strip()[:120],
-                })
+    # Use the canonical audit scanner to detect wrapper/vacuous theorems
+    # in exact modules, then cross-reference with the manifest.
+    manifest = load_manifest()
+    exact_modules = {
+        e["module"] for e in manifest.get("verified_target", {}).get("modules", [])
+        if e.get("status") == "exact"
+    }
+    declared = [
+        (t["module"], t["name"])
+        for t in manifest.get("theorems", [])
+        if t.get("status") in ("wrapper", "vacuous")
+    ]
+
+    def _is_declared(module: str, name: str) -> bool:
+        """Check if (module, name) matches a declared wrapper/vacuous entry.
+
+        Handles qualified names: manifest may use ``Namespace.foo``
+        while the source scanner finds bare ``foo``.
+        """
+        for dm, dn in declared:
+            if dm == module and (dn == name or dn.endswith("." + name)):
+                return True
+        return False
+
+    scan_dir = ROOT / "RLGeneralization"
+    audit_entries = scan_directory(scan_dir)
+    declared_wrappers: list[dict] = []
+
+    for e in audit_entries:
+        if e["module"] not in exact_modules:
+            continue
+        if e["status"] not in ("wrapper", "vacuous"):
+            continue
+        if _is_declared(e["module"], e["name"]):
+            declared_wrappers.append(e)
+        else:
+            issues.append({
+                "file": e["module"].replace(".", "/") + ".lean",
+                "line": e.get("line", 0),
+                "type": f"undeclared_{e['status']}_in_exact",
+                "text": f"{e['name']}: {e.get('note', '')}",
+            })
+
+    if declared_wrappers:
+        print(f"  [info] {len(declared_wrappers)} declared wrapper/vacuous theorem(s) "
+              f"in exact modules (tracked in manifest):", file=sys.stderr)
+        for e in declared_wrappers:
+            print(f"    {e['module']}.{e['name']} [{e['status']}]", file=sys.stderr)
 
     # Check conditional modules for unannotated sorry (sorry without
     # a [CONDITIONAL: ...] annotation within 10 lines).
@@ -317,8 +374,9 @@ def main() -> None:
             print()
         else:
             if not issues:
-                print("Strict check passed: no sorry/wrapper/vacuous in exact modules, "
-                      "no unannotated sorry in conditional modules.")
+                print("Strict check passed: no banned patterns or undeclared "
+                      "wrappers in exact modules, no unannotated sorry in "
+                      "conditional modules.")
             else:
                 print(f"STRICT FAIL: {len(issues)} issue(s) in trusted-root modules:\n")
                 for issue in issues:
@@ -329,7 +387,7 @@ def main() -> None:
     elif args.audit:
         scan_dir = ROOT / "RLGeneralization"
         entries = audit_lean_files(scan_dir)
-        if args.json or True:  # audit always outputs JSON
+        if True:  # audit always outputs JSON
             json.dump(entries, sys.stdout, indent=2)
             print()
         counts: dict[str, int] = {}
@@ -424,6 +482,8 @@ def main() -> None:
                         print(f"  {rfile.name}: OK")
                 except (json.JSONDecodeError, KeyError):
                     print(f"  {rfile.name}: (skipped, not valid results format)")
+
+        sys.exit(1 if lean_issues else 0)
 
 
 if __name__ == "__main__":

@@ -262,6 +262,9 @@ The measure-theory plumbing is 300+ lines. We state the theorems
 and defer the construction. -/
 
 /-- **Robbins-Siegmund convergence theorem** (conditional).
+    [WRAPPER: The Cauchy convergence hypothesis IS the conclusion restated
+    (Metric.tendsto_atTop is the definition). A genuine proof requires
+    nonneg supermartingale convergence.]
 
 Given the Robbins-Siegmund hypothesis, the sequence X_n converges
 to a finite nonneg limit L:
@@ -269,12 +272,9 @@ to a finite nonneg limit L:
   X_n → L  as n → ∞
 
 In the stochastic version, this is almost-sure convergence.
-
--- Hypothesis: h_cauchy encapsulates the Cauchy property that in the full
--- probabilistic proof follows from the nonneg supermartingale convergence
--- theorem applied to the deflated process X_n / ∏(1+Y_k). Proving this
--- requires measure-theoretic conditional expectation and filtration machinery
--- beyond what is currently composed in Mathlib's discrete-time API. -/
+The h_cauchy hypothesis encapsulates the Cauchy property that in the full
+probabilistic proof follows from the nonneg supermartingale convergence
+theorem. -/
 theorem robbins_siegmund_conditional (hyp : RobbinsSiegmundHypothesis)
     (L : ℝ) (_hL : 0 ≤ L)
     -- Hypothesis: Cauchy convergence from supermartingale convergence theorem

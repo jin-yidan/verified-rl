@@ -208,13 +208,13 @@ theorem weightedSqIWLoss_nonneg (cfg : BanditEXP3Config K T) (t : Fin T) :
   exact sq_nonneg _
 
 /-- **EXP3 bandit regret bound (potential-function form)**.
+  [WRAPPER: Returns the potential-function telescoping hypothesis directly.]
 
-  Using the same potential-function argument as Hedge but on the IW losses,
-  we get the intermediate bound:
+  Regret ≤ log(K)/η + η · Σ_t Σ_a p_t(a) · l̃_t(a)².
 
-    Regret ≤ log(K)/η + η · Σ_t Σ_a p_t(a) · l̃_t(a)²
-
-  The hypothesis `h_potential` encodes the potential-function telescoping. -/
+  The potential-function telescoping (which requires the exp(-x) ≤ 1-x+x²
+  inequality applied to importance-weighted losses) is taken as a
+  hypothesis; the body returns it unchanged. -/
 theorem exp3_bandit_regret_bound
     (cfg : BanditEXP3Config K T)
     (a_star : Fin K)
@@ -240,11 +240,12 @@ theorem exp3_bandit_regret_bound
   Hence: E[Regret] ≤ log(K)/η + η · K · T.
 -/
 
-/-- The per-round sum of weighted squared IW losses is at most K:
-    Σ_a p_t(a) · l̃_t(a)² ≤ K.
+/-- **Weighted squared IW loss bound.**
+    [WRAPPER: Returns the IW squared-loss hypothesis directly.]
 
-    This is the key step where bandit feedback introduces the extra K factor.
-    In the full-information Hedge analysis, Σ_a p_t(a) · l_t(a)² ≤ 1. -/
+    Σ_a p_t(a) · l̃_t(a)² ≤ K.  The bound requires expectation over
+    the random arm choice a_t ~ p_t (measure-theoretic); taken as a
+    hypothesis here. -/
 theorem weightedSqIWLoss_le_K
     (cfg : BanditEXP3Config K T)
     (t : Fin T)

@@ -58,19 +58,13 @@ variable {K : ℕ} [NeZero K]
   `ucb_probabilistic_regret_bridge` and `ucb_gap_dependent_regret_presentation`
   from the respective modules. All algebraic content is proved exactly. -/
 
-/-- **Exact high-probability UCB regret bound.**
+/-- **UCB regret bound (gap-dependent form).**
+  [WRAPPER: Returns the good-event regret hypothesis directly.]
 
-  Given that under the good event, the UCB regret satisfies R_T ≤ bound,
-  we propagate this bound.
-
-  To instantiate: use `ucb_probabilistic_regret_bridge` from
-  BanditConcentration.lean for the probability certificate, and
-  `ucb_gap_dependent_regret_presentation` from UCB.lean for the regret
-  bound, with L = log(2KT/δ) and bound = ∑_{a:Δ>0} (8L/Δ_a + 2Δ_a).
-
-  The regret bound under the good event is a precondition on the
-  policy `I`; it is discharged by `ucb_gap_dependent_regret_presentation`
-  for any policy satisfying the UCB selection rule. -/
+  Takes the good-event regret bound as a hypothesis and returns it.
+  The actual bound is derived in `ucb_gap_dependent_regret_presentation`
+  (UCB.lean); the probability certificate comes from
+  `ucb_probabilistic_regret_bridge` (BanditConcentration.lean). -/
 theorem ucb_regret_high_probability
     (B : BanditInstance K) (T : ℕ) (_hT : 0 < T)
     (_δ : ℝ) (_hδ : 0 < _δ) (_hδ_le : _δ ≤ 1)

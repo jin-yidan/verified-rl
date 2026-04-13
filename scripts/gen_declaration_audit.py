@@ -51,6 +51,38 @@ _VACUOUS_RE = re.compile(r"\[VACUOUS\b")
 _COMMENT_LINE_RE = re.compile(r"^\s*--")
 
 
+def _strip_block_comments_from_lines(lines: list[str]) -> list[str]:
+    """Return lines with /- ... -/ block comment content removed.
+
+    Preserves line count (one output line per input line) so indices
+    remain valid for declaration boundary tracking.
+    """
+    result: list[str] = []
+    depth = 0
+    for line in lines:
+        out_parts: list[str] = []
+        i = 0
+        while i < len(line):
+            if depth == 0:
+                if line[i:i + 2] == "/-":
+                    depth += 1
+                    i += 2
+                else:
+                    out_parts.append(line[i])
+                    i += 1
+            else:
+                if line[i:i + 2] == "/-":
+                    depth += 1
+                    i += 2
+                elif line[i:i + 2] == "-/":
+                    depth -= 1
+                    i += 2
+                else:
+                    i += 1
+        result.append("".join(out_parts))
+    return result
+
+
 def _is_sorry_in_code(line: str) -> bool:
     """Return True if the line has a sorry outside a -- comment."""
     m = _SORRY_RE.search(line)
@@ -66,6 +98,7 @@ def classify_declaration(
     decl_end: int,
     lines: list[str],
     module_status: str,
+    stripped_lines: list[str] | None = None,
 ) -> dict:
     """Classify a single declaration by scanning surrounding lines for markers.
 
@@ -73,19 +106,32 @@ def classify_declaration(
       - 8 lines before the declaration (docstring / attribute annotations)
       - the declaration body itself, stopping at the next declaration
 
+    ``stripped_lines``, if provided, should be the same file with block
+    comments removed (via ``_strip_block_comments_from_lines``).  Using
+    stripped lines for sorry detection avoids false positives from phrases
+    like "zero sorry" inside /- ... -/ doc comments.
+
     Returns a dict with keys: name, status, has_sorry, note.
     """
     window_before = lines[max(0, decl_start - 8): decl_start]
-    window_after = lines[decl_start: decl_end]
     marker_window_after = lines[decl_start: min(decl_end, decl_start + 12)]
-    snippet = "\n".join(window_before + marker_window_after)
 
-    # Check markers
-    is_wrapper = bool(_WRAPPER_RE.search(snippet))
-    is_vacuous = bool(_VACUOUS_RE.search(snippet))
-    is_conditional_annotated = bool(_CONDITIONAL_RE.search(snippet))
+    # [WRAPPER] and [VACUOUS] markers live in the docstring BEFORE the
+    # declaration keyword.  Scanning marker_window_after too causes
+    # false positives when the next declaration's docstring falls
+    # within 12 lines.
+    before_snippet = "\n".join(window_before)
+    is_wrapper = bool(_WRAPPER_RE.search(before_snippet))
+    is_vacuous = bool(_VACUOUS_RE.search(before_snippet))
 
-    # Check for sorry in non-comment lines in the window_after
+    # [CONDITIONAL] may appear near sorry in the body, so scan both.
+    full_snippet = "\n".join(window_before + marker_window_after)
+    is_conditional_annotated = bool(_CONDITIONAL_RE.search(full_snippet))
+
+    # Check for sorry in non-comment lines in the window_after.
+    # Use block-comment-stripped lines to avoid false positives.
+    sorry_source = (stripped_lines if stripped_lines is not None else lines)
+    window_after = sorry_source[decl_start: decl_end]
     sorry_lines = [
         l for l in window_after
         if not _COMMENT_LINE_RE.match(l) and _is_sorry_in_code(l)
@@ -166,6 +212,7 @@ def scan_directory(scan_dir: Path) -> list[dict]:
 
         text = lean_file.read_text(errors="replace")
         lines = text.splitlines()
+        stripped_lines = _strip_block_comments_from_lines(lines)
 
         matches = list(_DECL_RE.finditer(text))
 
@@ -178,7 +225,7 @@ def scan_directory(scan_dir: Path) -> list[dict]:
             else:
                 next_decl_line = len(lines)
 
-            info = classify_declaration(name, decl_line, next_decl_line, lines, module_status)
+            info = classify_declaration(name, decl_line, next_decl_line, lines, module_status, stripped_lines)
 
             # Apply theorem-level overrides from manifest (wrapper/vacuous/weaker)
             # These take precedence over source-marker classification when the
@@ -198,7 +245,7 @@ def scan_directory(scan_dir: Path) -> list[dict]:
                 if candidate_key in theorem_overrides:
                     ovr = theorem_overrides[candidate_key]
                     ovr_status = ovr["status"]
-                    if ovr_status in ("wrapper", "vacuous", "weaker"):
+                    if ovr_status in ("wrapper", "vacuous", "weaker", "conditional"):
                         info["status"] = ovr_status
                         info["note"] = ovr.get("gap_note", "") or info["note"]
 

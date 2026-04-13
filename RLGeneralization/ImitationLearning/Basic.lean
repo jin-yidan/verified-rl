@@ -307,7 +307,8 @@ theorem dagger_bound (I : ImitationSetting)
     _ = (I.mdp.H : ℝ) * I.epsilon := by
         rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
 
-/-- Legacy wrapper, kept for compatibility. -/
+/-- [WRAPPER: The state-distribution mismatch argument is not derived
+    in the file.] Legacy wrapper, kept for compatibility. -/
 theorem behavior_cloning_bound_from_pdl
     (V_expert V_learner : Real)
     (_hVE : V_expert <= I.mdp.H)

@@ -292,14 +292,14 @@ theorem RademacherBound.generalizationBound_nonneg (R : RademacherBound) :
   mul_nonneg (by norm_num : (0 : ℝ) ≤ 2) R.hbound
 
 /-- **Rademacher PAC generalization bound (algebraic)**.
+    [WRAPPER: Pure le_trans of deviation and combined bound hypotheses.]
 
     With probability ≥ 1-δ over the sample:
 
       sup_{f ∈ F} |P_n f - Pf| ≤ 2·R_n(F) + √(2·log(1/δ)/n)
 
-    The second term comes from McDiarmid concentration of the supremum.
-    This theorem takes the bound components as hypotheses and derives
-    the combined PAC guarantee. -/
+    Both the deviation bound and the combined bound are taken as
+    hypotheses; the body is le_trans. -/
 theorem rademacher_pac_bound
     {R_n_bound mcdiarmid_term eps : ℝ}
     (_hR : 0 ≤ R_n_bound)
