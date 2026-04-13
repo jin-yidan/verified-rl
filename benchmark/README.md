@@ -40,12 +40,12 @@ Each problem in `mlstatbench.json` has:
 
 | Domain | Count | Description |
 |--------|-------|-------------|
-| bellman | 39 | Bellman equations, contraction, fixed points |
-| concentration | 27 | Hoeffding, Bernstein, PAC bounds |
-| exploration | 22 | UCB, UCBVI, optimistic bonus arguments |
-| other | 1 | Miscellaneous |
-| policy_optimization | 16 | Policy gradient, CPI, advantage |
-| regression | 75 | LSVI, FQI, linear MDP, SLT covering numbers |
+| bellman | 35 | Bellman equations, contraction, fixed points |
+| concentration | 25 | Hoeffding, Bernstein, PAC bounds |
+| exploration | 20 | UCB, UCBVI, optimistic bonus arguments |
+| other | 15 | LQR, differential privacy, miscellaneous |
+| policy_optimization | 15 | Policy gradient, CPI, advantage |
+| regression | 70 | LSVI, FQI, linear MDP, SLT covering numbers |
 | sample_complexity | 15 | Generalization bounds, minimax rates |
 | simulation | 5 | Simulation lemma and resolvent identities |
 
@@ -53,8 +53,8 @@ Each problem in `mlstatbench.json` has:
 
 | Level | Count | Description |
 |-------|-------|-------------|
-| bridge | 29 | Cross-domain problems combining multiple areas |
-| easy | 9 | Short proofs (≤5 lines), single-domain |
+| bridge | 28 | Cross-domain problems combining multiple areas |
+| easy | 10 | Short proofs (≤5 lines), single-domain |
 | hard | 65 | Long proofs or weak-status theorems |
 | medium | 97 | Moderate proofs, standard techniques |
 
@@ -90,7 +90,7 @@ python benchmark/analyze_failures.py benchmark/results/<prover>_results.local.js
 | Domain | Competition math | Undergrad math | ML/stats theory |
 | Language | Lean 4 / Isabelle | Lean 4 | Lean 4 |
 | Ground truth | Human proofs | Varied | Machine-verified (0 sorry) |
-| Bridge problems | No | No | Yes (29 cross-domain) |
+| Bridge problems | No | No | Yes (28 cross-domain) |
 | ML-specific | No | No | Yes |
 
 ## Citation

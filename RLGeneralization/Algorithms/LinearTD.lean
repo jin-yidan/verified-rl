@@ -37,8 +37,6 @@ and its minimum eigenvalue as abstract parameters.
 * [Szepesvari, *Algorithms for Reinforcement Learning*, 2010]
 -/
 
-import RLGeneralization.MDP.Basic
-import RLGeneralization.MDP.BellmanContraction
 import RLGeneralization.Generalization.PolicyEvaluation
 
 open Finset BigOperators

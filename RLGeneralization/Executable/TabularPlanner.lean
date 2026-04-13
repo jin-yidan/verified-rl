@@ -24,8 +24,6 @@ produce the bound.
 * [Agarwal et al., *RL: Theory and Algorithms*][agarwal2026]
 -/
 
-import RLGeneralization.MDP.Basic
-import RLGeneralization.MDP.BellmanContraction
 import RLGeneralization.MDP.ValueIteration
 
 open Finset BigOperators

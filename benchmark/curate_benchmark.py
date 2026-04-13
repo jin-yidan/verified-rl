@@ -9,7 +9,6 @@ Usage:
 """
 
 import json
-import random
 import re
 import sys
 from collections import Counter
@@ -62,8 +61,6 @@ def mentions_private_name(problem: dict) -> bool:
 
 def curate(problems: list[dict], target: int = 200) -> list[dict]:
     """Select a benchmark with explicit domain balance and difficulty spread."""
-
-    random.seed(42)
 
     difficulty_rank = {"bridge": 0, "hard": 1, "medium": 2, "easy": 3}
     source_rank = {"slt": 0, "rl": 1}

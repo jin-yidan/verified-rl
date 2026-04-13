@@ -53,7 +53,6 @@ The belief update is the algebraic Bayesian formula.
 * [Agarwal et al., *RL: Theory and Algorithms*]
 -/
 
-import RLGeneralization.MDP.Basic
 import RLGeneralization.MDP.BellmanContraction
 import Mathlib.Data.Real.Basic
 import Mathlib.Algebra.BigOperators.Group.Finset.Basic
@@ -126,6 +125,26 @@ structure BeliefState where
   wt_nonneg : ∀ s, 0 ≤ wt s
   /-- Weights sum to 1 -/
   wt_sum_one : ∑ s, wt s = 1
+
+/-- **Convex combination of two belief states**:
+    b_mix(s) = λ · b₁(s) + (1-λ) · b₂(s). -/
+def mixBeliefState (b₁ b₂ : M.BeliefState) (lam : ℝ)
+    (hlam_nonneg : 0 ≤ lam) (hlam_le_one : lam ≤ 1) : M.BeliefState where
+  wt s := lam * b₁.wt s + (1 - lam) * b₂.wt s
+  wt_nonneg s := add_nonneg
+    (mul_nonneg hlam_nonneg (b₁.wt_nonneg s))
+    (mul_nonneg (by linarith) (b₂.wt_nonneg s))
+  wt_sum_one := by
+    simp only [Finset.sum_add_distrib, ← Finset.mul_sum,
+      b₁.wt_sum_one, b₂.wt_sum_one, mul_one]
+    ring
+
+/-- The mix weight formula. -/
+@[simp]
+theorem mixBeliefState_wt (b₁ b₂ : M.BeliefState) (lam : ℝ)
+    (hlam_nonneg : 0 ≤ lam) (hlam_le_one : lam ≤ 1) (s : M.S) :
+    (M.mixBeliefState b₁ b₂ lam hlam_nonneg hlam_le_one).wt s =
+      lam * b₁.wt s + (1 - lam) * b₂.wt s := rfl
 
 /-- Expected reward under a belief state and action:
     r(b, a) = ∑_s b(s) · r(s, a). -/
@@ -355,13 +374,11 @@ def alphaValue (α : M.AlphaVector) (b : M.BeliefState) : ℝ :=
 /-- Alpha value is linear in the belief: for any convex combination
     λ b₁ + (1-λ) b₂, the alpha value decomposes linearly. -/
 theorem alphaValue_linear (α : M.AlphaVector) (b₁ b₂ : M.BeliefState)
-    (lam : ℝ) (_hlamnonneg : 0 ≤ lam) (_hlamle_one : lam ≤ 1)
-    (b_mix : M.BeliefState)
-    -- [CONDITIONAL HYPOTHESIS] The mixed belief has weights λ b₁(s) + (1-λ) b₂(s)
-    (hmix : ∀ s, b_mix.wt s = lam * b₁.wt s + (1 - lam) * b₂.wt s) :
-    M.alphaValue α b_mix = lam * M.alphaValue α b₁ + (1 - lam) * M.alphaValue α b₂ := by
+    (lam : ℝ) (hlamnonneg : 0 ≤ lam) (hlamle_one : lam ≤ 1) :
+    M.alphaValue α (M.mixBeliefState b₁ b₂ lam hlamnonneg hlamle_one) =
+      lam * M.alphaValue α b₁ + (1 - lam) * M.alphaValue α b₂ := by
   unfold alphaValue
-  simp_rw [hmix, add_mul]
+  simp only [mixBeliefState_wt, add_mul]
   rw [Finset.sum_add_distrib]
   have h₁ : ∑ s, lam * b₁.wt s * α s = lam * ∑ s, b₁.wt s * α s := by
     rw [Finset.mul_sum]; congr 1; ext1 s; ring
@@ -396,19 +413,14 @@ attribute [instance] PiecewiseLinearConvex.instFintypeIdx PiecewiseLinearConvex.
     so max_i α_i(b) is convex as the pointwise supremum of affine functions. -/
 theorem pwlc_convex (pw : M.PiecewiseLinearConvex)
     (b₁ b₂ : M.BeliefState) (lam : ℝ)
-    (hlamnonneg : 0 ≤ lam) (hlamle_one : lam ≤ 1)
-    (b_mix : M.BeliefState)
-    -- [CONDITIONAL HYPOTHESIS] The mixed belief has weights λ b₁(s) + (1-λ) b₂(s)
-    (hmix : ∀ s, b_mix.wt s = lam * b₁.wt s + (1 - lam) * b₂.wt s) :
-    pw.value b_mix ≤ lam * pw.value b₁ + (1 - lam) * pw.value b₂ := by
-  rw [pw.value_eq b_mix]
+    (hlamnonneg : 0 ≤ lam) (hlamle_one : lam ≤ 1) :
+    pw.value (M.mixBeliefState b₁ b₂ lam hlamnonneg hlamle_one) ≤
+      lam * pw.value b₁ + (1 - lam) * pw.value b₂ := by
+  rw [pw.value_eq]
   apply Finset.sup'_le
   intro i _
   -- For each alpha vector i: alphaValue(α_i, b_mix) = λ αᵢ(b₁) + (1-λ) αᵢ(b₂)
-  have hlin : M.alphaValue (pw.alphas i) b_mix =
-      lam * M.alphaValue (pw.alphas i) b₁ +
-        (1 - lam) * M.alphaValue (pw.alphas i) b₂ :=
-    M.alphaValue_linear (pw.alphas i) b₁ b₂ lam hlamnonneg hlamle_one b_mix hmix
+  have hlin := M.alphaValue_linear (pw.alphas i) b₁ b₂ lam hlamnonneg hlamle_one
   rw [hlin]
   -- Now: λ αᵢ(b₁) + (1-λ) αᵢ(b₂) ≤ λ max_j αⱼ(b₁) + (1-λ) max_j αⱼ(b₂)
   have h1 : M.alphaValue (pw.alphas i) b₁ ≤

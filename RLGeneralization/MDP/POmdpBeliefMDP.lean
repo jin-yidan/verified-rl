@@ -40,7 +40,6 @@ belief update is Markovian: b_{t+1} depends only on (b_t, a_t, o_{t+1}).
 -/
 
 import RLGeneralization.MDP.POMDP
-import RLGeneralization.MDP.Basic
 
 open Finset BigOperators
 

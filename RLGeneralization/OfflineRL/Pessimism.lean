@@ -26,7 +26,6 @@ pairs with few samples.
 -/
 
 import RLGeneralization.OfflineRL.FQI
-import RLGeneralization.MDP.Basic
 import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
 open Finset BigOperators

@@ -124,6 +124,51 @@ DOMAIN_MAP = {
     "Bandits.LowerBound": "exploration",
     "Bandits.ThompsonSampling": "exploration",
     "Test.SimpleMDP": "bellman",
+    # --- Added: 44 modules previously defaulting to "other" ---
+    "Algorithms.GenerativeQLearning": "bellman",
+    "Algorithms.MCTS": "bellman",
+    "Algorithms.ModelBased": "bellman",
+    "Algorithms.SARSA": "bellman",
+    "Bandits.EXP3Bandit": "exploration",
+    "Bandits.LinearBandits": "exploration",
+    "Bandits.UCBRegret": "exploration",
+    "BilinearRank.GOLF": "exploration",
+    "BilinearRank.RepresentationBound": "sample_complexity",
+    "Complexity.EluderDimension": "sample_complexity",
+    "Concentration.BennettMGF": "concentration",
+    "Concentration.DiscreteConcentration": "concentration",
+    "Concentration.GenerativeModelBernstein": "concentration",
+    "Concentration.GenerativeModelEmpirical": "concentration",
+    "Concentration.GenerativeModelMinimax": "concentration",
+    "Concentration.GenerativeModelPAC": "concentration",
+    "Concentration.MDPConcentration": "concentration",
+    "Concentration.MDPFiltration": "concentration",
+    "Concentration.McDiarmidFull": "concentration",
+    "Concentration.RobbinsSiegmund": "concentration",
+    "Concentration.SelfNormalized": "concentration",
+    "Concentration.TrajectoryMeasure": "concentration",
+    "Executable.CertifiedVI": "bellman",
+    "Executable.LPCertificate": "bellman",
+    "Executable.TabularPlanner": "bellman",
+    "Exploration.RewardFree": "exploration",
+    "Exploration.UCBVIProbability": "exploration",
+    "Exploration.UCBVISimulation": "exploration",
+    "Generalization.DudleyRL": "sample_complexity",
+    "Generalization.PolicyEvaluation": "sample_complexity",
+    "Generalization.SLTBridge": "sample_complexity",
+    "Generalization.TransferRL": "sample_complexity",
+    "Generalization.UniformConvergence": "sample_complexity",
+    "ImitationLearning.MaxEntIRL": "policy_optimization",
+    "LQR.RiccatiPolicy": "bellman",
+    "LinearMDP.EllipticalBridge": "regression",
+    "LinearMDP.RegretFull": "exploration",
+    "LowerBounds.MinimaxMatching": "sample_complexity",
+    "MDP.AverageRewardNonasymptotic": "bellman",
+    "MDP.ConstrainedMDP": "bellman",
+    "MDP.Options": "bellman",
+    "MDP.RewardShaping": "bellman",
+    "PolicyOptimization.ActorCritic": "policy_optimization",
+    "PolicyOptimization.TRPO": "policy_optimization",
 }
 
 
@@ -570,7 +615,10 @@ def build_problems() -> list[dict]:
             all_decls.extend(decls)
 
     # Also extract from the SLT reference library (for diversity)
-    slt_root = ROOT / "references" / "lean-stat-learning-theory"
+    # Prefer Lake-managed path (.lake/packages/SLT), fall back to references/
+    slt_root = ROOT / ".lake" / "packages" / "SLT"
+    if not slt_root.exists():
+        slt_root = ROOT / "references" / "lean-stat-learning-theory"
     slt_count = 0
     if slt_root.exists():
         for lean_file in sorted(slt_root.rglob("SLT/**/*.lean")):
@@ -604,6 +652,10 @@ def build_problems() -> list[dict]:
         # Fall back to module status
         if status == "unknown" and decl["module"] in statuses:
             status = statuses[decl["module"]]
+
+        # SLT library compiles without sorry; infer all its theorems as exact
+        if status == "unknown" and source == "slt":
+            status = "exact"
 
         if status == "unknown":
             print(f"warning: no status found for {decl['qualified_name']} "

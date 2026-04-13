@@ -143,6 +143,53 @@ theorem episode_bellman_error_le_H (brb : M.BellmanRankBound)
     _ = (M.H : ℝ) := by
         simp [Finset.sum_const]
 
+/-! ### Multi-Episode Bounds from Bilinear Structure -/
+
+/-- **Total absolute Bellman error across K episodes is bounded by K·H.**
+
+  From the bilinear rank structure, each step's total error |∑_s BE| ≤ 1
+  (by Cauchy-Schwarz on the unit-norm embeddings). Summing over K episodes
+  and H steps gives the bound K·H. -/
+theorem total_absolute_bellman_error_le (brb : M.BellmanRankBound)
+    (K : ℕ) (f_sel : Fin K → Fin brb.F.n)
+    (pi_sel : Fin K → Fin M.H → M.S → M.A) :
+    ∑ k : Fin K, ∑ h : Fin M.H,
+      |∑ s : M.S, M.bellmanError brb.F (f_sel k) (pi_sel k) h s| ≤
+    (K : ℝ) * M.H := by
+  calc ∑ k : Fin K, ∑ h : Fin M.H,
+        |∑ s, M.bellmanError brb.F (f_sel k) (pi_sel k) h s|
+      ≤ ∑ k : Fin K, ∑ _h : Fin M.H, (1 : ℝ) := by
+        apply Finset.sum_le_sum; intro k _
+        apply Finset.sum_le_sum; intro h _
+        exact M.bellman_error_le_of_rank brb (pi_sel k) (f_sel k) h
+    _ = ∑ _k : Fin K, (M.H : ℝ) := by
+        apply Finset.sum_congr rfl; intro k _
+        simp [Finset.sum_const, Finset.card_univ]
+    _ = (K : ℝ) * M.H := by
+        simp [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+
+/-- **Average per-episode absolute Bellman error is at most H.**
+
+  From `total_absolute_bellman_error_le`, dividing by K:
+    (1/K) · ∑_k ∑_h |∑_s BE| ≤ H
+
+  This is a genuine bound from the bilinear Cauchy-Schwarz structure. -/
+theorem average_bellman_error_le_H (brb : M.BellmanRankBound)
+    (K : ℕ) (hK : 0 < K)
+    (f_sel : Fin K → Fin brb.F.n)
+    (pi_sel : Fin K → Fin M.H → M.S → M.A) :
+    (1 / (K : ℝ)) * ∑ k : Fin K, ∑ h : Fin M.H,
+      |∑ s : M.S, M.bellmanError brb.F (f_sel k) (pi_sel k) h s| ≤
+    (M.H : ℝ) := by
+  have hK_pos : (0 : ℝ) < K := Nat.cast_pos.mpr hK
+  calc (1 / (K : ℝ)) * ∑ k : Fin K, ∑ h : Fin M.H,
+        |∑ s, M.bellmanError brb.F (f_sel k) (pi_sel k) h s|
+      ≤ (1 / (K : ℝ)) * ((K : ℝ) * M.H) := by
+        apply mul_le_mul_of_nonneg_left
+          (M.total_absolute_bellman_error_le brb K f_sel pi_sel)
+          (by positivity)
+    _ = (M.H : ℝ) := by field_simp [ne_of_gt hK_pos]
+
 end FiniteHorizonMDP
 
 end

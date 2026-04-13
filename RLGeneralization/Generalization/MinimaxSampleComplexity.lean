@@ -15,8 +15,8 @@ in `verification_manifest.json`.
 ## Main Results
 
 * `transition_variance` - Variance of V under transition P(·|s,a).
-* `weighted_deviation_bound_genuine` - Proved: |W(s)| ≤ 2γ·V_max/(1-γ)
-  from variance bound + resolvent contraction.
+* `weighted_deviation_bound_genuine` - Proved: |W(s)| ≤ γ·V_max/(1-γ)
+  from variance bound (Var ≤ V_max²) + resolvent contraction.
 * `minimax_deterministic_core` - Deterministic core:
     V*(s) - V̂*(s) ≤ 2γ·R_max·ε_T/(1-γ)²
   by chaining optimality_gap_from_transition_error.
@@ -105,6 +105,43 @@ lemma transition_variance_le_sq_norm (V : M.StateValueFn) (s : M.S) (a : M.A)
         rw [← Finset.sum_mul]; ring
     _ = (2 * B) ^ 2 := by rw [M.P_sum_one s a, mul_one]
 
+/-- **Tighter variance bound**: Var_P(V) ≤ V_max² (via E[X²] - μ² ≤ E[X²]).
+
+    This improves on `transition_variance_le_sq_norm` which gives (2V_max)².
+    Proof: expand Var = ∑ P(V-μ)² = ∑ PV² - μ² ≤ ∑ PV² ≤ B². -/
+lemma transition_variance_le_sq (V : M.StateValueFn) (s : M.S) (a : M.A)
+    (B : ℝ) (_hB_nonneg : 0 ≤ B) (hB : ∀ s', |V s'| ≤ B) :
+    M.transition_variance V s a ≤ B ^ 2 := by
+  -- Strategy: Var = E[V²] - μ² ≤ E[V²] ≤ B²
+  -- We bound each term directly using the (2B)² bound on (V-μ)²
+  -- but then improve using E[V²] ≤ B²
+  unfold transition_variance
+  set μ := ∑ s', M.P s a s' * V s' with hμ_def
+  -- Step 1: Show ∑P·V² ≤ B²
+  have h_EXsq_le : ∑ s', M.P s a s' * V s' ^ 2 ≤ B ^ 2 := by
+    calc ∑ s', M.P s a s' * V s' ^ 2
+        ≤ ∑ s', M.P s a s' * B ^ 2 := by
+          apply Finset.sum_le_sum; intro s' _
+          apply mul_le_mul_of_nonneg_left _ (M.P_nonneg s a s')
+          exact sq_le_sq' (by linarith [abs_le.mp (hB s')]) (abs_le.mp (hB s')).2
+      _ = B ^ 2 := by rw [← Finset.sum_mul, M.P_sum_one s a, one_mul]
+  -- Step 2: Show ∑P·(V-μ)² = ∑P·V² - μ²
+  have h_var_identity : ∑ s', M.P s a s' * (V s' - μ) ^ 2 =
+      ∑ s', M.P s a s' * V s' ^ 2 - μ ^ 2 := by
+    have : ∀ s', M.P s a s' * (V s' - μ) ^ 2 =
+        M.P s a s' * V s' ^ 2 - 2 * μ * (M.P s a s' * V s') +
+          μ ^ 2 * M.P s a s' := by intro s'; ring
+    conv_lhs => arg 2; ext s'; rw [this s']
+    rw [Finset.sum_add_distrib, Finset.sum_sub_distrib]
+    have h1 : ∑ s', μ ^ 2 * M.P s a s' = μ ^ 2 := by
+      rw [← Finset.mul_sum, M.P_sum_one s a, mul_one]
+    have h2 : ∑ s', 2 * μ * (M.P s a s' * V s') = 2 * μ * μ := by
+      rw [← Finset.mul_sum]
+    rw [h1, h2]; ring
+  -- Step 3: Combine
+  rw [h_var_identity]
+  linarith [sq_nonneg μ]
+
 /-- The empirical variance of V under empirical transition P̂(·|s,a). -/
 def empirical_variance (P_hat : M.S → M.A → M.S → ℝ)
     (V : M.StateValueFn) (s : M.S) (a : M.A) : ℝ :=
@@ -123,38 +160,34 @@ def weighted_deviation (π : M.StochasticPolicy) (V_star : M.StateValueFn)
 
 /-! ### Weighted Deviation Bound: Genuine Proof -/
 
-/-- √Var_P(V*)(s,a) ≤ 2·V_max, following from Var_P(V*) ≤ (2·V_max)². -/
-lemma sqrt_variance_le_two_Vmax (V_star : M.StateValueFn)
+/-- √Var_P(V*)(s,a) ≤ V_max, using the tighter Var ≤ V_max² bound. -/
+lemma sqrt_variance_le_Vmax (V_star : M.StateValueFn)
     (hV_bnd : ∀ s, |V_star s| ≤ M.V_max)
     (s : M.S) (a : M.A) :
-    Real.sqrt (M.transition_variance V_star s a) ≤ 2 * M.V_max := by
-  have h_var := M.transition_variance_le_sq_norm V_star s a M.V_max hV_bnd
-  have h_sq_nonneg : 0 ≤ (2 * M.V_max) ^ 2 :=
-    le_trans (M.transition_variance_nonneg V_star s a) h_var
+    Real.sqrt (M.transition_variance V_star s a) ≤ M.V_max := by
+  have h_var := M.transition_variance_le_sq V_star s a M.V_max
+    (le_of_lt M.V_max_pos) hV_bnd
   calc Real.sqrt (M.transition_variance V_star s a)
-      ≤ Real.sqrt ((2 * M.V_max) ^ 2) :=
-        Real.sqrt_le_sqrt h_var
-    _ = |2 * M.V_max| := Real.sqrt_sq_eq_abs _
-    _ = 2 * M.V_max := by
-        rw [abs_of_nonneg]
-        linarith [M.V_max_pos]
+      ≤ Real.sqrt (M.V_max ^ 2) := Real.sqrt_le_sqrt h_var
+    _ = |M.V_max| := Real.sqrt_sq_eq_abs _
+    _ = M.V_max := abs_of_nonneg (le_of_lt M.V_max_pos)
 
-/-- Σ^π(s) ≤ γ · 2 · V_max for all s, directly from the variance bound. -/
+/-- Σ^π(s) ≤ γ · V_max for all s, from √Var ≤ V_max. -/
 lemma weighted_deviation_le (π : M.StochasticPolicy)
     (V_star : M.StateValueFn)
     (hV_bnd : ∀ s, |V_star s| ≤ M.V_max) (s : M.S) :
-    M.weighted_deviation π V_star s ≤ M.γ * (2 * M.V_max) := by
+    M.weighted_deviation π V_star s ≤ M.γ * M.V_max := by
   unfold weighted_deviation
   apply mul_le_mul_of_nonneg_left _ M.γ_nonneg
   calc ∑ a, π.prob s a * Real.sqrt (M.transition_variance V_star s a)
-      ≤ ∑ a, π.prob s a * (2 * M.V_max) := by
+      ≤ ∑ a, π.prob s a * M.V_max := by
         apply Finset.sum_le_sum; intro a _
         exact mul_le_mul_of_nonneg_left
-          (M.sqrt_variance_le_two_Vmax V_star hV_bnd s a)
+          (M.sqrt_variance_le_Vmax V_star hV_bnd s a)
           (π.prob_nonneg s a)
-    _ = (∑ a, π.prob s a) * (2 * M.V_max) := by
+    _ = (∑ a, π.prob s a) * M.V_max := by
         rw [Finset.sum_mul]
-    _ = 2 * M.V_max := by rw [π.prob_sum_one s, one_mul]
+    _ = M.V_max := by rw [π.prob_sum_one s, one_mul]
 
 /-- Σ^π(s) ≥ 0 for all s. -/
 lemma weighted_deviation_nonneg (π : M.StochasticPolicy)
@@ -165,20 +198,19 @@ lemma weighted_deviation_nonneg (π : M.StochasticPolicy)
   apply Finset.sum_nonneg; intro a _
   exact mul_nonneg (π.prob_nonneg s a) (Real.sqrt_nonneg _)
 
-/-- **Weighted deviation resolvent bound**.
+/-- **Weighted deviation resolvent bound** (strengthened).
 
   For V* bounded by V_max, and any policy π, if W solves the
   resolvent equation W = Σ^π + γP^πW, then:
 
-    |W(s)| ≤ 2γ · V_max / (1-γ)
+    |W(s)| ≤ γ · V_max / (1-γ)
 
   This follows from:
-  1. transition_variance_le_sq_norm: Var_P(V*) ≤ (2·V_max)²
-  2. So √Var ≤ 2·V_max, hence Σ^π(s) ≤ γ·2·V_max
-  3. resolvent_bound: ‖(I-γP^π)⁻¹ Σ^π‖ ≤ ‖Σ^π‖/(1-γ) ≤ 2γ·V_max/(1-γ)
+  1. transition_variance_le_sq: Var_P(V*) ≤ V_max² (via E[X²]-μ² ≤ E[X²])
+  2. So √Var ≤ V_max, hence Σ^π(s) ≤ γ·V_max
+  3. resolvent_bound: ‖(I-γP^π)⁻¹ Σ^π‖ ≤ ‖Σ^π‖/(1-γ) ≤ γ·V_max/(1-γ)
 
-  This is weaker than the optimal √(2/(1-γ)³) target bound,
-  but it is genuinely proved from first principles. -/
+  This improves the previous bound by a factor of 2 (was 2γ·V_max/(1-γ)). -/
 theorem weighted_deviation_bound_genuine (π : M.StochasticPolicy)
     (V_star : M.StateValueFn)
     (hV_bnd : ∀ s, |V_star s| ≤ M.V_max)
@@ -186,29 +218,27 @@ theorem weighted_deviation_bound_genuine (π : M.StochasticPolicy)
     (W : M.StateValueFn)
     (hW : ∀ s, W s = M.weighted_deviation π V_star s +
       M.γ * M.expectedNextValue π W s) :
-    ∀ s, |W s| ≤ 2 * M.γ * M.V_max / (1 - M.γ) := by
-  -- Step 1: The driving term Σ^π(s) ≤ γ·2·V_max for all s
+    ∀ s, |W s| ≤ M.γ * M.V_max / (1 - M.γ) := by
+  -- Step 1: The driving term Σ^π(s) ≤ γ·V_max for all s
   have h_drive : ∀ s, |M.weighted_deviation π V_star s| ≤
-      M.γ * (2 * M.V_max) := by
+      M.γ * M.V_max := by
     intro s
     rw [abs_of_nonneg (M.weighted_deviation_nonneg π V_star s)]
     exact M.weighted_deviation_le π V_star hV_bnd s
   -- Step 2: Apply resolvent_bound with v = Σ^π
   have h_res := M.resolvent_bound π W (M.weighted_deviation π V_star) hW
-  -- h_res : ∀ s, |W s| ≤ supNormV(Σ^π) / (1-γ)
-  -- Step 3: supNormV(Σ^π) ≤ γ·2·V_max
+  -- Step 3: supNormV(Σ^π) ≤ γ·V_max
   have h_sup : M.supNormV (M.weighted_deviation π V_star) ≤
-      M.γ * (2 * M.V_max) := by
+      M.γ * M.V_max := by
     simp only [supNormV]
     exact Finset.sup'_le _ _ (fun s _ => h_drive s)
   -- Step 4: Combine
   intro s
   calc |W s|
       ≤ M.supNormV (M.weighted_deviation π V_star) / (1 - M.γ) := h_res s
-    _ ≤ M.γ * (2 * M.V_max) / (1 - M.γ) := by
+    _ ≤ M.γ * M.V_max / (1 - M.γ) := by
         apply div_le_div_of_nonneg_right h_sup
         linarith [M.γ_lt_one]
-    _ = 2 * M.γ * M.V_max / (1 - M.γ) := by ring
 
 /-! ### Variance Identity: Var = E[X²] - (EX)² -/
 
@@ -300,8 +330,8 @@ lemma weighted_sum_fn_diff_le (w : M.S → ℝ) (f g : M.S → ℝ)
   2. Triangle inequality on E[X²] and (EX)² terms
   3. |V* - V̂*| bounded by value gap from transition error
 
-  The constant 64 bounds the cross terms (larger than the
-  tight 48 for ease of proof). -/
+  See `variance_swap_from_simulation` for the self-contained version
+  that eliminates δ_V via the simulation-lemma rate. -/
 theorem variance_swap (M_hat : M.ApproxMDP)
     (V_star V_hat_star : M.StateValueFn)
     (hV_bnd : ∀ s, |V_star s| ≤ M.V_max)
@@ -512,6 +542,42 @@ theorem variance_swap (M_hat : M.ApproxMDP)
     nlinarith [h_Esq_bound, h_sq_lower]
   -- Since emp_var ≥ 0, Var_{P̂} + C ≤ 2*Var_{P̂} + C
   nlinarith [h_var_diff, h_emp_var_nonneg]
+
+/-- **Self-contained variance swap** — eliminates the explicit value-gap
+  parameter δ_V by using the simulation-lemma rate δ_V ≤ γ·V_max·ε_T/(1-γ).
+
+  The bound simplifies to:
+
+    Var_P(V*)(s,a) ≤ 2 · Var_{P̂}(V̂*)(s,a) + (3 + γ)/(1 - γ) · V_max² · ε_T
+
+  This matches the target formulation in Agarwal et al. (2026), Ch 4. -/
+theorem variance_swap_from_simulation (M_hat : M.ApproxMDP)
+    (V_star V_hat_star : M.StateValueFn)
+    (hV_bnd : ∀ s, |V_star s| ≤ M.V_max)
+    (hV_hat_bnd : ∀ s, |V_hat_star s| ≤ M.V_max)
+    (ε_T : ℝ) (hε_T_nonneg : 0 ≤ ε_T)
+    (hε_T : M.transitionError M_hat ≤ ε_T)
+    (h_val_gap : ∀ s, |V_star s - V_hat_star s| ≤
+      M.γ * M.V_max * ε_T / (1 - M.γ)) :
+    ∀ s a, M.transition_variance V_star s a ≤
+      2 * M.empirical_variance M_hat.P_hat V_hat_star s a +
+      (3 + M.γ) / (1 - M.γ) * M.V_max ^ 2 * ε_T := by
+  intro s a
+  have h1g : (0 : ℝ) < 1 - M.γ := by linarith [M.γ_lt_one]
+  have hδ_nonneg : 0 ≤ M.γ * M.V_max * ε_T / (1 - M.γ) :=
+    div_nonneg (mul_nonneg (mul_nonneg M.γ_nonneg (le_of_lt M.V_max_pos))
+      hε_T_nonneg) (le_of_lt h1g)
+  have h := M.variance_swap M_hat V_star V_hat_star hV_bnd hV_hat_bnd
+    (M.γ * M.V_max * ε_T / (1 - M.γ)) hδ_nonneg h_val_gap
+    ε_T hε_T_nonneg hε_T s a
+  -- h : ... ≤ 2 * emp_var + (3 * V² * ε + 4V * (γVε/(1-γ)))
+  -- Goal: ... ≤ 2 * emp_var + (3+γ)/(1-γ) * V² * ε
+  -- These are equal: 3V²ε + 4γV²ε/(1-γ) = (3(1-γ) + 4γ)/(1-γ) · V²ε = (3+γ)/(1-γ) · V²ε
+  have h_eq : 3 * M.V_max ^ 2 * ε_T + 4 * M.V_max * (M.γ * M.V_max * ε_T / (1 - M.γ)) =
+      (3 + M.γ) / (1 - M.γ) * M.V_max ^ 2 * ε_T := by
+    field_simp
+    ring
+  linarith
 
 /-! ### Minimax Deterministic Core -/
 

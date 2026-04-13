@@ -90,7 +90,15 @@ import RLGeneralization.Concentration.Isoperimetric
 import RLGeneralization.Concentration.PhiEntropy
 -- Concentration: trusted generative-model probability space and PAC bound
 import RLGeneralization.Concentration.GenerativeModelCore
--- Concentration: Bernstein PAC analysis, canonical fixed-point construction
+-- Concentration: empirical MDP definitions and policy converters
+import RLGeneralization.Concentration.GenerativeModelEmpirical
+-- Concentration: Bernstein concentration for the generative-model product space
+import RLGeneralization.Concentration.GenerativeModelBernstein
+-- Concentration: deterministic minimax reductions and high-probability lifts
+import RLGeneralization.Concentration.GenerativeModelMinimax
+-- Concentration: sample complexity inversion and capstone PAC theorems
+import RLGeneralization.Concentration.GenerativeModelPAC
+-- Concentration: re-export shim for backward compatibility
 import RLGeneralization.Concentration.GenerativeModel
 -- Concentration: Discrete distribution L1 concentration, multinomial bound, RL transition
 import RLGeneralization.Concentration.DiscreteConcentration

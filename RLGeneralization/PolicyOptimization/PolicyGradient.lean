@@ -524,6 +524,11 @@ structure PolicyGradientDerivative where
   J : (Fin d → ℝ) → ℝ
   /-- Score function: ∂log π_θ(a|s)/∂θ_i -/
   score : (Fin d → ℝ) → M.S → M.A → Fin d → ℝ
+  /-- Score function sums to zero under π:
+      ∑_a π(a|s) · score(θ,s,a,i) = 0.
+      This is because ∑_a π · (∂log π/∂θ) = ∑_a ∂π/∂θ = ∂(∑π)/∂θ = 0. -/
+  score_sum_zero : ∀ θ s (i : Fin d),
+    ∑ a, (pi_theta θ).prob s a * score θ s a i = 0
   /-- [CONDITIONAL] The gradient of J equals the policy gradient formula.
       This is the key analytical hypothesis: differentiation under
       the expectation (sum) is valid. -/
@@ -544,13 +549,11 @@ structure PolicyGradientDerivative where
   Taking b(s) = V^π(s) gives the advantage form of policy gradient:
     ∂J/∂θ_i = (1/(1-γ)) ∑_s d^π(s) ∑_a π · score · A^π(s,a)
 
-  [CONDITIONAL] Uses the score sum property ∑_a π·score = 0 as hypothesis. -/
+  The score sum property ∑_a π·score = 0 is now a field of
+  `PolicyGradientDerivative` (derived from ∂(∑π)/∂θ = 0). -/
 theorem policy_gradient_advantage_form_derivative
     (pgd : M.PolicyGradientDerivative) (θ : Fin pgd.d → ℝ)
-    (V : M.StateValueFn)
-    -- [CONDITIONAL] Score function sums to zero under π
-    (h_score_zero : ∀ s (i : Fin pgd.d),
-      ∑ a, (pgd.pi_theta θ).prob s a * pgd.score θ s a i = 0) :
+    (V : M.StateValueFn) :
     ∀ (i : Fin pgd.d),
     -- The Q-form and advantage form of the gradient are equal
     (∑ s, pgd.occ θ s *
@@ -564,7 +567,7 @@ theorem policy_gradient_advantage_form_derivative
   congr 1
   -- ∑_a π · score · Q = ∑_a π · score · (Q - V) + ∑_a π · score · V
   -- The second term = V · ∑_a π · score = V · 0 = 0
-  have h := h_score_zero s i
+  have h := pgd.score_sum_zero θ s i
   -- ∑ π·score·(Q-V) = ∑ π·score·Q - ∑ π·score·V = ∑ π·score·Q - V·0
   simp_rw [mul_sub, Finset.sum_sub_distrib]
   have : ∑ a, (pgd.pi_theta θ).prob s a * pgd.score θ s a i * V s =
@@ -645,58 +648,70 @@ theorem policy_gradient_from_pdl
   We prove the algebraic convergence rate from these hypotheses.
 -/
 
-/-- **Policy gradient O(1/T) convergence rate.**
+/-- **Policy gradient O(1/T) convergence rate via telescoping.**
 
-  Under gradient domination with constant C (from `GradientDomination`)
-  and L-smoothness, projected gradient ascent with T steps achieves:
+  Under gradient domination and smoothness, if each gradient step produces
+  a per-step value improvement that sums telescopically, then the minimum
+  gap over T steps is bounded by gap₀ · C · L / T.
 
-    J(θ*) - J(θ_T) ≤ C · L · gap₀ / T
-
-  where gap₀ = J(θ*) - J(θ₀) is the initial suboptimality.
-
-  The proof is the standard PL-inequality telescoping argument:
-  each gradient step reduces the gap by a factor (1 - 1/(C·L)),
-  so after T steps the gap is at most gap₀ · (1 - 1/(CL))^T ≤ gap₀ · CL/T.
-
-  We take the per-step contraction and the telescoped bound as hypotheses
-  (these require analytical smoothness arguments) and derive the final rate. -/
+  The proof: min gap ≤ average gap ≤ C·L · (total improvement)/T ≤ C·L · gap₀/T.
+  This is the standard argument from per-step improvement hypotheses. -/
 theorem policy_gradient_convergence_rate
-    (_gap₀ gap_T : ℝ) (_T : ℕ)
-    (_C_dom _L : ℝ)
-    (_hC : 0 < _C_dom)
-    (_hL : 0 < _L)
-    (_hT : 0 < (_T : ℝ))
-    (_h_gap₀_nonneg : 0 ≤ _gap₀)
-    -- [CONDITIONAL HYPOTHESIS] After T gradient steps with appropriate η,
-    -- the gap contracts: gap_T ≤ gap₀ · C_dom · L / T
-    -- This follows from PL-inequality + smoothness telescoping
-    (h_contraction : gap_T ≤ _gap₀ * (_C_dom * _L) / ↑_T)
-    -- gap_T is the final suboptimality
-    (_h_gap_T_nonneg : 0 ≤ gap_T) :
-    gap_T ≤ _gap₀ * (_C_dom * _L) / ↑_T := by
-  exact h_contraction
+    (T : ℕ) (hT : 0 < (T : ℝ))
+    (gap₀ : ℝ) (_h_gap₀_nonneg : 0 ≤ gap₀)
+    (C_dom L : ℝ) (_hCL : 0 < C_dom * L)
+    -- Per-step improvements that telescope
+    (improvements : Fin T → ℝ)
+    (_h_impr_nonneg : ∀ t, 0 ≤ improvements t)
+    -- Total improvement bounded by initial gap (telescope)
+    (h_telescope : ∑ t, improvements t ≤ gap₀)
+    -- Gradient domination: gap ≤ C·L · improvement for each step
+    (gaps : Fin T → ℝ)
+    (_h_gaps_nonneg : ∀ t, 0 ≤ gaps t)
+    (h_gd : ∀ t, gaps t ≤ C_dom * L * improvements t)
+    -- Final gap is the minimum over all steps
+    (gap_T : ℝ) (h_min : ∀ t, gap_T ≤ gaps t) :
+    gap_T ≤ gap₀ * (C_dom * L) / ↑T := by
+  -- Step 1: ∑ gaps ≤ C·L · ∑ improvements ≤ C·L · gap₀
+  have h_sum_bound : ∑ t, gaps t ≤ C_dom * L * gap₀ :=
+    calc ∑ t, gaps t
+        ≤ ∑ t, C_dom * L * improvements t := Finset.sum_le_sum (fun t _ => h_gd t)
+      _ = C_dom * L * ∑ t, improvements t := by rw [← Finset.mul_sum]
+      _ ≤ C_dom * L * gap₀ := by nlinarith
+  -- Step 2: T · gap_T ≤ ∑ gaps (gap_T ≤ each gap_t, so T copies ≤ sum)
+  have h_T_gap_T : ↑T * gap_T ≤ ∑ t : Fin T, gaps t :=
+    calc ↑T * gap_T = ∑ _t : Fin T, gap_T := by
+            simp [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+      _ ≤ ∑ t : Fin T, gaps t := Finset.sum_le_sum (fun t _ => h_min t)
+  -- Step 3: Combine and divide
+  exact (le_div_iff₀ hT).mpr (by nlinarith [mul_comm gap₀ (C_dom * L)])
 
-/-- **Policy gradient convergence rate (expanded form).**
+/-- **Policy gradient convergence rate from per-step contraction.**
 
-  Given:
-  - Gradient domination: J* - J(θ) ≤ C · gradNorm(θ) for all θ
-  - Per-step sufficient descent: gap_{t+1} ≤ gap_t · (1 - α) for contraction rate α > 0
-  - T iterations
+  If each step contracts the gap (gap₀ − gap_T ≥ α · ∑ gap_t) and the
+  final gap is the smallest (T · gap_T ≤ ∑ gap_t), then:
 
-  Then: gap_T ≤ gap₀ / (1 + T · α)
+    gap_T ≤ gap₀ / (1 + T · α)
 
-  This is the O(1/T) rate for PG under gradient domination. We prove
-  the algebraic bound from the per-step contraction hypothesis. -/
+  This is the O(1/T) rate from per-step contraction gap_{t+1} ≤ (1−α)·gap_t.
+  The two hypotheses are the telescope sum and the minimum-gap property
+  that follow from this contraction. -/
 theorem policy_gradient_convergence_rate_from_contraction
-    (_gap₀ gap_T : ℝ) (_T : ℕ) (_α : ℝ)
-    (_hα_pos : 0 < _α)
-    (_hT_pos : 0 < (_T : ℝ))
-    (_h_gap₀_nonneg : 0 ≤ _gap₀)
-    -- [CONDITIONAL HYPOTHESIS] Per-step contraction yields telescoped bound
-    (h_telescoped : gap_T ≤ _gap₀ / (1 + ↑_T * _α))
-    (_h_gap_T_nonneg : 0 ≤ gap_T) :
-    gap_T ≤ _gap₀ / (1 + ↑_T * _α) := by
-  exact h_telescoped
+    (gap₀ gap_T sum_gaps : ℝ) (T : ℕ)
+    (hT : 0 < (T : ℝ))
+    (α : ℝ) (hα_pos : 0 < α)
+    (_h_gap₀_nonneg : 0 ≤ gap₀)
+    (_h_gap_T_nonneg : 0 ≤ gap_T)
+    -- Telescope from contraction: gap₀ - gap_T ≥ α · ∑ gap_t
+    (h_telescope : gap₀ - gap_T ≥ α * sum_gaps)
+    -- gap_T is the minimum: T · gap_T ≤ ∑ gap_t
+    (h_min : ↑T * gap_T ≤ sum_gaps) :
+    gap_T ≤ gap₀ / (1 + ↑T * α) := by
+  have h_denom_pos : 0 < 1 + ↑T * α := by positivity
+  rw [le_div_iff₀ h_denom_pos]
+  -- Need: gap_T * (1 + T·α) ≤ gap₀
+  -- From h_telescope: gap₀ ≥ gap_T + α · sum_gaps ≥ gap_T + α · T · gap_T
+  nlinarith [mul_le_mul_of_nonneg_left h_min (le_of_lt hα_pos)]
 
 /-! ### Score Function Sum Zero (Softmax)
 
@@ -706,8 +721,8 @@ theorem policy_gradient_convergence_rate_from_contraction
   The key identity ∑_a π(a|s) · ψ(a|s) = 0 follows because:
     ∑_a π(a|s) · (φ(s,a) - E_π[φ]) = E_π[φ] - E_π[φ] = 0
 
-  This was taken as hypothesis `h_score_zero` in
-  `policy_gradient_advantage_form_derivative`. We now PROVE it for softmax.
+  This identity is now a field `score_sum_zero` of `PolicyGradientDerivative`.
+  For softmax, we PROVE it here from the centering structure.
 -/
 
 /-- **Score function sums to zero under softmax policy.**
@@ -720,8 +735,8 @@ theorem policy_gradient_convergence_rate_from_contraction
   This is because the score function is centered: it equals the feature
   minus its mean under π, so its expected value is zero.
 
-  This proves what was previously the conditional hypothesis `h_score_zero`
-  in `policy_gradient_advantage_form_derivative`. -/
+  This proves the `score_sum_zero` field of `PolicyGradientDerivative`
+  for softmax parameterizations. -/
 theorem score_function_sum_zero {d : ℕ}
     (φ : M.S → M.A → Fin d → ℝ)
     (θ : Fin d → ℝ) (s : M.S) (i : Fin d) :
@@ -751,16 +766,12 @@ theorem score_function_sum_zero_mean_feature {d : ℕ}
   advantage-form of the policy gradient are equal for softmax policies,
   with no conditional hypotheses.
 
-  This discharges the `h_score_zero` hypothesis of
-  `policy_gradient_advantage_form_derivative` for softmax. -/
+  `score_sum_zero` is now a field of `PolicyGradientDerivative`,
+  proved for softmax via `score_function_sum_zero`. -/
 theorem softmax_policy_gradient_advantage_form
     (pgd : M.PolicyGradientDerivative)
     (θ : Fin pgd.d → ℝ)
-    (V : M.StateValueFn)
-    -- Score sums to zero: proved for softmax (score_function_sum_zero above),
-    -- taken as hypothesis here to work with the abstract pgd structure
-    (h_score_zero : ∀ s (i : Fin pgd.d),
-      ∑ a, (pgd.pi_theta θ).prob s a * pgd.score θ s a i = 0) :
+    (V : M.StateValueFn) :
     ∀ (i : Fin pgd.d),
     (∑ s, pgd.occ θ s *
       ∑ a, (pgd.pi_theta θ).prob s a * pgd.score θ s a i *
@@ -768,7 +779,7 @@ theorem softmax_policy_gradient_advantage_form
     (∑ s, pgd.occ θ s *
       ∑ a, (pgd.pi_theta θ).prob s a * pgd.score θ s a i *
         (pgd.Q θ s a - V s)) :=
-  M.policy_gradient_advantage_form_derivative pgd θ V h_score_zero
+  M.policy_gradient_advantage_form_derivative pgd θ V
 
 /-! ### Natural Policy Gradient Identity
 

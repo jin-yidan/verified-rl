@@ -24,8 +24,6 @@ produces a value function together with a proof of its approximation bound.
 * [Bertsekas, *Dynamic Programming and Optimal Control*][bertsekas2012]
 -/
 
-import RLGeneralization.MDP.Basic
-import RLGeneralization.MDP.BellmanContraction
 import RLGeneralization.MDP.ValueIteration
 
 open Finset BigOperators

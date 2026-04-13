@@ -122,15 +122,16 @@ def main() -> None:
             + ", ".join(bad_verified_statuses)
         )
 
-    verified_wrappers = [
-        entry["module"]
+    banned_verified_statuses = {"wrapper", "stub", "vacuous"}
+    verified_banned = [
+        f'{entry["module"]} ({entry.get("status")})'
         for entry in manifest["verified_target"]["modules"]
-        if entry.get("status") == "wrapper"
+        if entry.get("status") in banned_verified_statuses
     ]
-    if verified_wrappers:
+    if verified_banned:
         fail(
-            "verified_target.modules must not contain wrapper statuses: "
-            + ", ".join(verified_wrappers)
+            "verified_target.modules must not contain wrapper/stub/vacuous statuses: "
+            + ", ".join(verified_banned)
         )
 
     bad_theorem_statuses = [
